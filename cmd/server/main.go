@@ -64,8 +64,7 @@ func main() {
 
 func run() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/update/gauge/", updateGauge)
-	mux.HandleFunc("/update/counter/", updateCounter)
+	mux.HandleFunc("/update/{type}/{metric}/{value}", update)
 
 	middleware3 := checkMetricsMw(mux)
 	middleware2 := checkActionsMw(middleware3)
@@ -169,18 +168,17 @@ func checkMetricsMw(next http.Handler) http.Handler {
 	})
 }
 
-func updateGauge(w http.ResponseWriter, r *http.Request) {
-	metricValue := r.URL.Path[len("/update/guage/"):]
-	metricData := strings.Split(metricValue, "/")
-	metricName := metricData[0]
-	value, _ := strconv.ParseFloat(metricData[1], 64)
-	ms.SetGauge(metricName, gauge(value))
-}
+func update(w http.ResponseWriter, r *http.Request) {
+	metricName := r.PathValue("metric")
+	metricValue := r.PathValue("value")
 
-func updateCounter(w http.ResponseWriter, r *http.Request) {
-	metricValue := r.URL.Path[len("/update/counter/"):]
-	metricData := strings.Split(metricValue, "/")
-	metricName := metricData[0]
-	value, _ := strconv.ParseInt(metricData[1], 10, 64)
-	ms.AddCounter(metricName, counter(value))
+	switch metricName {
+
+	case "gauge":
+		value, _ := strconv.ParseFloat(metricValue, 64)
+		ms.SetGauge(metricName, gauge(value))
+	case "counter":
+		value, _ := strconv.ParseInt(metricValue, 10, 64)
+		ms.AddCounter(metricName, counter(value))
+	}
 }
