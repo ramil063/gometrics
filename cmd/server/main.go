@@ -95,9 +95,9 @@ func checkActionsMw(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		re := regexp.MustCompile(`/update/`)
-		notUpdateUrl := len(re.Find([]byte(r.URL.Path)))
+		notUpdateURL := len(re.Find([]byte(r.URL.Path)))
 		//разрешаем только update экшн
-		if notUpdateUrl == 0 {
+		if notUpdateURL == 0 {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
