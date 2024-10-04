@@ -41,8 +41,11 @@ func (c client) SendPostRequest(url string) error {
 	req, _ := c.NewRequest("POST", url)
 	req.Header.Set("Content-Type", "text/plain")
 	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
 	defer res.Body.Close()
-	return err
+	return nil
 }
 
 func (c client) NewRequest(method string, url string) (*http.Request, error) {

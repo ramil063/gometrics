@@ -59,6 +59,7 @@ func Test_update(t *testing.T) {
 			res := w.Result()
 			// проверяем код ответа
 			assert.Equal(t, test.statusCode, res.StatusCode)
+			defer res.Body.Close()
 			// получаем и проверяем тело запроса
 			_, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
