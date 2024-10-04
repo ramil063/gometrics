@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var MainUrl = "http://localhost:8080"
+var MainURL = "http://localhost:8080"
 
 type RequestInterface interface {
 	SendMetrics(c ClientInterface, maxCount int) error
@@ -40,7 +40,8 @@ func NewRequest() RequestInterface {
 func (c client) SendPostRequest(url string) error {
 	req, _ := c.NewRequest("POST", url)
 	req.Header.Set("Content-Type", "text/plain")
-	_, err := c.httpClient.Do(req)
+	res, err := c.httpClient.Do(req)
+	defer res.Body.Close()
 	return err
 }
 
@@ -72,7 +73,7 @@ func (r request) SendMetrics(c ClientInterface, maxCount int) error {
 					metricType = "counter"
 				}
 				metricValue := fmt.Sprintf("%v", v.Field(i).Interface())
-				url := MainUrl + "/update/" + metricType + "/" + typeOfS.Field(i).Name + "/" + metricValue
+				url := MainURL + "/update/" + metricType + "/" + typeOfS.Field(i).Name + "/" + metricValue
 
 				err := c.SendPostRequest(url)
 				if err != nil {

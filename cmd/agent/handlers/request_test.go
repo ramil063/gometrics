@@ -76,7 +76,7 @@ func Test_client_SendPostRequest(t *testing.T) {
 		args    args
 		wantErr assert.ErrorAssertionFunc
 	}{
-		{"send post", args{url: MainUrl + "/update/gauge/metric1/100"}, assert.NoError},
+		{"send post", args{url: MainURL + "/update/gauge/metric1/100"}, assert.NoError},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

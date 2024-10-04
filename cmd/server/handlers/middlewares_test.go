@@ -44,6 +44,7 @@ func TestCheckMethodMw(t *testing.T) {
 			assert.Equal(t, test.want.code, res.StatusCode)
 			// получаем и проверяем тело запроса
 
+			defer res.Body.Close()
 			_, err := io.ReadAll(res.Body)
 
 			require.NoError(t, err)
@@ -83,6 +84,7 @@ func TestCheckActionsMw(t *testing.T) {
 			assert.Equal(t, test.want.code, res.StatusCode)
 			// получаем и проверяем тело запроса
 
+			defer res.Body.Close()
 			_, err := io.ReadAll(res.Body)
 
 			require.NoError(t, err)
@@ -125,6 +127,7 @@ func TestCheckMetricsMw(t *testing.T) {
 			assert.Equal(t, test.want.code, res.StatusCode)
 			// получаем и проверяем тело запроса
 
+			defer res.Body.Close()
 			_, err := io.ReadAll(res.Body)
 
 			require.NoError(t, err)
