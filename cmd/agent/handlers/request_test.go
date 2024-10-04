@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
@@ -56,13 +57,13 @@ func Test_request_SendMetrics(t *testing.T) {
 func TestNewClient(t *testing.T) {
 	tests := []struct {
 		name string
-		want ClientInterface
+		want string
 	}{
-		{"create new request", ClientMock{}.Client},
+		{"create new request", "handlers.client"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, NewClient(), "NewClient()")
+			assert.Equalf(t, tt.want, reflect.ValueOf(NewClient()).Type().String(), "NewClient()")
 		})
 	}
 }
