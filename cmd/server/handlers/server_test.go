@@ -69,6 +69,7 @@ func TestRouter(t *testing.T) {
 	}
 	for _, v := range testTable {
 		resp, _ := testRequest(t, ts, "POST", v.url)
+		defer resp.Body.Close()
 		assert.Equal(t, v.status, resp.StatusCode)
 	}
 }
@@ -96,6 +97,7 @@ func Test_getValue(t *testing.T) {
 			ms = storage.NewMemStorage()
 			ms.SetGauge("a", 1.1)
 			resp, _ := testRequest(t, ts, "GET", test.url)
+			defer resp.Body.Close()
 			assert.Equal(t, test.want.code, resp.StatusCode)
 			assert.Equal(t, test.want.contentType, resp.Header.Get("Content-Type"))
 		})
@@ -114,6 +116,7 @@ func Test_getValue(t *testing.T) {
 			ms = storage.NewMemStorage()
 			ms.AddCounter("a", 1)
 			resp, _ := testRequest(t, ts, "GET", test.url)
+			defer resp.Body.Close()
 			assert.Equal(t, test.want.code, resp.StatusCode)
 			assert.Equal(t, test.want.contentType, resp.Header.Get("Content-Type"))
 		})
@@ -141,6 +144,7 @@ func Test_home(t *testing.T) {
 			ms = storage.NewMemStorage()
 			ms.SetGauge("a", 1.1)
 			resp, _ := testRequest(t, ts, "GET", test.url)
+			defer resp.Body.Close()
 			assert.Equal(t, test.want.code, resp.StatusCode)
 			assert.Equal(t, test.want.contentType, resp.Header.Get("Content-Type"))
 		})
