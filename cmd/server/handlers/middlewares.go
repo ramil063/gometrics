@@ -17,10 +17,6 @@ func CheckMethodMw(next http.Handler) http.Handler {
 			log.Println("Error in method")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			w.Write([]byte("Неверный запрос"))
-		} else if r.Header.Get("Content-Type") != "text/plain" {
-			log.Println("Error in context-type")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			w.Write([]byte("Неверный запрос"))
 		} else {
 			next.ServeHTTP(w, r)
 		}

@@ -20,8 +20,8 @@ func TestCheckMethodMw(t *testing.T) {
 		contentType string
 		want        want
 	}{
-		{"test 1", http.MethodGet, "text-plain", want{405, ""}},
-		{"test 2", http.MethodPost, "application/json", want{405, ""}},
+		{"test 1", http.MethodGet, "text-plain", want{200, "text/plain; charset=utf-8"}},
+		{"test 2", http.MethodPost, "application/json", want{200, "text/plain; charset=utf-8"}},
 		{"test 3", http.MethodPost, "text/plain", want{200, "text/plain; charset=utf-8"}},
 	}
 	for _, test := range tests {

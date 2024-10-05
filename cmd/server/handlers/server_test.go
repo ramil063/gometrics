@@ -66,6 +66,7 @@ func TestRouter(t *testing.T) {
 		{"test 1", "/update/gauge/a/1", http.StatusOK},
 		{"test 2", "/update/gauge/a", http.StatusNotFound},
 		{"test 3", "/update/counter/", http.StatusNotFound},
+		{"test 4", "/update/counter/testSetGet32/417", http.StatusOK},
 	}
 	for _, v := range testTable {
 		resp, _ := testRequest(t, ts, "POST", v.url)
@@ -91,6 +92,7 @@ func Test_getValue(t *testing.T) {
 		{"gauge test 1", "/value/gauge/a", want{200, "", "text/plain; charset=utf-8"}},
 		{"gauge test 2", "/value/gauge/a1", want{404, "", "text/plain; charset=utf-8"}},
 		{"gauge test 3", "/value/gauge/", want{404, "", ""}},
+		{"gauge test 4", "/value/gauge/testUnknown80", want{404, "", "text/plain; charset=utf-8"}},
 	}
 	for _, test := range testsG {
 		t.Run(test.name, func(t *testing.T) {
