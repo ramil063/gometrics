@@ -93,7 +93,7 @@ func TestCheckActionsMw(t *testing.T) {
 	}
 }
 
-func TestCheckMetricsMw(t *testing.T) {
+func TestCheckUpdateMetricsMw(t *testing.T) {
 	type want struct {
 		code        int
 		response    string
@@ -110,6 +110,49 @@ func TestCheckMetricsMw(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodPost, test.target, nil)
+			// создаём новый Recorder
+			w := httptest.NewRecorder()
+			nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.WriteHeader(http.StatusOK)
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			})
+
+			handlerToTest := CheckUpdateMetricsMw(nextHandler)
+			handlerToTest.ServeHTTP(w, request)
+
+			res := w.Result()
+			// проверяем код ответа
+			assert.Equal(t, test.want.code, res.StatusCode)
+			// получаем и проверяем тело запроса
+
+			defer res.Body.Close()
+			_, err := io.ReadAll(res.Body)
+
+			require.NoError(t, err)
+			assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
+		})
+	}
+}
+
+func TestCheckValueMetricsMw(t *testing.T) {
+	type want struct {
+		code        int
+		response    string
+		contentType string
+	}
+	tests := []struct {
+		name   string
+		target string
+		want   want
+	}{
+		{"test 1", "/value/gauge/a/1", want{200, "", "text/plain; charset=utf-8"}},
+		{"test 2", "/value/gauge/a", want{200, "", "text/plain; charset=utf-8"}},
+		{"test 4", "/value/counter1/", want{http.StatusNotFound, "", ""}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, test.target, nil)
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
@@ -119,7 +162,7 @@ func TestCheckMetricsMw(t *testing.T) {
 				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			})
 
-			handlerToTest := CheckMetricsMw(nextHandler)
+			handlerToTest := CheckValueMetricsMw(nextHandler)
 			handlerToTest.ServeHTTP(w, request)
 
 			res := w.Result()
