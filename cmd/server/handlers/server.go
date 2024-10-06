@@ -71,7 +71,7 @@ func getValue(rw http.ResponseWriter, r *http.Request) {
 		}
 		rw.WriteHeader(http.StatusOK)
 		rw.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, err = io.WriteString(rw, strconv.FormatFloat(value, 'f', 3, 64))
+		_, err = io.WriteString(rw, strconv.FormatFloat(value, 'f', -1, 64))
 	case "counter":
 		value, ok := ms.GetCounter(metricName)
 		if !ok {
@@ -94,7 +94,7 @@ func home(rw http.ResponseWriter, r *http.Request) {
 
 	bodyGauge := ""
 	for key, g := range ms.GetGauges() {
-		str := strconv.FormatFloat(float64(g), 'f', 3, 64)
+		str := strconv.FormatFloat(float64(g), 'f', -1, 64)
 		bodyGauge += `<div>` + key + `-` + str + `</div>`
 	}
 	bodyCounters := ""
