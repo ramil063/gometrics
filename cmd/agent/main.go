@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	handlers.ParseFlags()
 	c := handlers.NewClient()
 	r := handlers.NewRequest()
 	var err = r.SendMetrics(c, 100)

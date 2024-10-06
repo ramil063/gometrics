@@ -8,9 +8,6 @@ import (
 type Counter uint64
 type Gauge float64
 
-var PollInterval uint8 = 2
-var ReportInterval uint8 = 10
-
 type Monitor struct {
 	Alloc,
 	BuckHashSys,

@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-var MainURL = "http://localhost:8080"
-
 type RequestInterface interface {
 	SendMetrics(c ClientInterface, maxCount int) error
 }
@@ -53,19 +51,22 @@ func (c client) NewRequest(method string, url string) (*http.Request, error) {
 }
 
 func (r request) SendMetrics(c ClientInterface, maxCount int) error {
-	var pollInterval = time.Duration(storage.PollInterval) * time.Second
-	var reportByPoll = int(storage.ReportInterval / storage.PollInterval)
+	var interval = 1 * time.Second
 	count := 0
+	seconds := 0
 	var m storage.Monitor
 
 	for count < maxCount {
-		<-time.After(pollInterval)
-		m = storage.NewMonitor()
-		m.PollCount = storage.Counter(count)
-		log.Println("get metrics")
-		count++
+		<-time.After(interval)
+		seconds++
+		if (seconds % int(PollInterval)) == 0 {
+			log.Println("get metrics")
+			m = storage.NewMonitor()
+			m.PollCount = storage.Counter(count)
+			count++
+		}
 
-		if (count % reportByPoll) == 0 {
+		if (seconds % int(ReportInterval)) == 0 {
 			v := reflect.ValueOf(m)
 			typeOfS := v.Type()
 			log.Println("send metrics")
@@ -76,11 +77,11 @@ func (r request) SendMetrics(c ClientInterface, maxCount int) error {
 					metricType = "counter"
 				}
 				metricValue := fmt.Sprintf("%v", v.Field(i).Interface())
-				url := MainURL + "/update/" + metricType + "/" + typeOfS.Field(i).Name + "/" + metricValue
+				url := "http://" + MainURL + "/update/" + metricType + "/" + typeOfS.Field(i).Name + "/" + metricValue
 
 				err := c.SendPostRequest(url)
 				if err != nil {
-					log.Fatal("Error")
+					log.Fatal("Error", err)
 					return err
 				}
 			}
