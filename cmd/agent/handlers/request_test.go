@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type RequestMock struct {
@@ -29,7 +30,7 @@ func (c ClientMock) NewRequest(method string, url string) (*http.Request, error)
 func TestNewRequest(t *testing.T) {
 	tests := []struct {
 		name string
-		want RequestInterface
+		want Requester
 	}{
 		{"create new request", RequestMock{}.Request},
 	}

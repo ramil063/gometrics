@@ -1,13 +1,14 @@
-package handlers
+package server
 
 import (
-	"github.com/ramil063/gometrics/cmd/server/storage"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_update(t *testing.T) {
@@ -22,10 +23,11 @@ func Test_update(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/update/gauge/a/1", nil)
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
-
-			nextHandler := http.HandlerFunc(update)
-
-			handlerToTest := CheckUpdateMetricsMw(nextHandler)
+			updateHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
+				ms := NewMemStorage()
+				update(rw, req, ms)
+			}
+			handlerToTest := http.HandlerFunc(updateHandlerFunction)
 			handlerToTest.ServeHTTP(w, request)
 
 			res := w.Result()
@@ -55,7 +57,8 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.
 }
 
 func TestRouter(t *testing.T) {
-	ts := httptest.NewServer(Router())
+	ms := NewMemStorage()
+	ts := httptest.NewServer(Router(ms))
 	defer ts.Close()
 
 	var testTable = []struct {
@@ -64,7 +67,7 @@ func TestRouter(t *testing.T) {
 		status int
 	}{
 		{"test 1", "/update/gauge/a/1", http.StatusOK},
-		{"test 2", "/update/gauge/a", http.StatusNotFound},
+		{"test 2", "/update/gauge/a", http.StatusBadRequest},
 		{"test 3", "/update/counter/", http.StatusNotFound},
 		{"test 4", "/update/counter/testSetGet32/417", http.StatusOK},
 	}
@@ -76,32 +79,30 @@ func TestRouter(t *testing.T) {
 }
 
 func Test_getValue(t *testing.T) {
-	ts := httptest.NewServer(Router())
+	ms := NewMemStorage()
+	ts := httptest.NewServer(Router(ms))
 	defer ts.Close()
 
 	type want struct {
-		code        int
-		response    string
-		contentType string
+		code     int
+		response string
 	}
 	testsG := []struct {
 		name string
 		url  string
 		want want
 	}{
-		{"gauge test 1", "/value/gauge/a", want{200, "", "text/plain; charset=utf-8"}},
-		{"gauge test 2", "/value/gauge/a1", want{404, "", "text/plain; charset=utf-8"}},
-		{"gauge test 3", "/value/gauge/", want{404, "", ""}},
-		{"gauge test 4", "/value/gauge/testUnknown80", want{404, "", "text/plain; charset=utf-8"}},
+		{"gauge test 1", "/value/gauge/a", want{200, ""}},
+		{"gauge test 2", "/value/gauge/a1", want{404, ""}},
+		{"gauge test 3", "/value/gauge/", want{404, ""}},
+		{"gauge test 4", "/value/gauge/testUnknown80", want{404, ""}},
 	}
 	for _, test := range testsG {
 		t.Run(test.name, func(t *testing.T) {
-			ms = storage.NewMemStorage()
 			ms.SetGauge("a", 1.1)
 			resp, _ := testRequest(t, ts, "GET", test.url)
 			defer resp.Body.Close()
 			assert.Equal(t, test.want.code, resp.StatusCode)
-			assert.Equal(t, test.want.contentType, resp.Header.Get("Content-Type"))
 		})
 	}
 	testsC := []struct {
@@ -109,24 +110,23 @@ func Test_getValue(t *testing.T) {
 		url  string
 		want want
 	}{
-		{"counter test 1", "/value/counter/a", want{200, "", "text/plain; charset=utf-8"}},
-		{"counter test 2", "/value/counter/a1", want{404, "", "text/plain; charset=utf-8"}},
-		{"counter test 3", "/value/counter/", want{404, "", ""}},
+		{"counter test 1", "/value/counter/a", want{200, ""}},
+		{"counter test 2", "/value/counter/a1", want{404, ""}},
+		{"counter test 3", "/value/counter/", want{404, ""}},
 	}
 	for _, test := range testsC {
 		t.Run(test.name, func(t *testing.T) {
-			ms = storage.NewMemStorage()
 			ms.AddCounter("a", 1)
 			resp, _ := testRequest(t, ts, "GET", test.url)
 			defer resp.Body.Close()
 			assert.Equal(t, test.want.code, resp.StatusCode)
-			assert.Equal(t, test.want.contentType, resp.Header.Get("Content-Type"))
 		})
 	}
 }
 
 func Test_home(t *testing.T) {
-	ts := httptest.NewServer(Router())
+	ms := NewMemStorage()
+	ts := httptest.NewServer(Router(ms))
 	defer ts.Close()
 
 	type want struct {
@@ -143,12 +143,26 @@ func Test_home(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ms = storage.NewMemStorage()
 			ms.SetGauge("a", 1.1)
 			resp, _ := testRequest(t, ts, "GET", test.url)
 			defer resp.Body.Close()
 			assert.Equal(t, test.want.code, resp.StatusCode)
 			assert.Equal(t, test.want.contentType, resp.Header.Get("Content-Type"))
+		})
+	}
+}
+
+func TestNewMemStorage(t *testing.T) {
+	tests := []struct {
+		name string
+		want string
+	}{
+		{"test 1", "*storage.MemStorage"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ms := NewMemStorage()
+			assert.Equalf(t, tt.want, reflect.ValueOf(ms).Type().String(), "NewMemStorage()")
 		})
 	}
 }

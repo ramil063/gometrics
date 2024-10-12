@@ -2,18 +2,19 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/ramil063/gometrics/cmd/agent/storage"
 	"log"
 	"net/http"
 	"reflect"
 	"time"
+
+	"github.com/ramil063/gometrics/cmd/agent/storage"
 )
 
-type RequestInterface interface {
-	SendMetrics(c ClientInterface, maxCount int) error
+type Requester interface {
+	SendMetrics(c Clienter, maxCount int) error
 }
 
-type ClientInterface interface {
+type Clienter interface {
 	SendPostRequest(url string) error
 	NewRequest(method string, url string) (*http.Request, error)
 }
@@ -25,13 +26,13 @@ type client struct {
 type request struct {
 }
 
-func NewClient() ClientInterface {
+func NewClient() Clienter {
 	return client{
 		httpClient: &http.Client{},
 	}
 }
 
-func NewRequest() RequestInterface {
+func NewRequest() Requester {
 	return request{}
 }
 
@@ -50,7 +51,7 @@ func (c client) NewRequest(method string, url string) (*http.Request, error) {
 	return http.NewRequest(method, url, nil)
 }
 
-func (r request) SendMetrics(c ClientInterface, maxCount int) error {
+func (r request) SendMetrics(c Clienter, maxCount int) error {
 	var interval = 1 * time.Second
 	count := 0
 	seconds := 0

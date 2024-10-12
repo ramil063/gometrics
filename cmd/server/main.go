@@ -1,13 +1,17 @@
 package main
 
 import (
-	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"net/http"
+
+	"github.com/ramil063/gometrics/cmd/server/handlers"
+	"github.com/ramil063/gometrics/cmd/server/handlers/server"
 )
 
 func main() {
+	var ms = server.NewMemStorage()
+
 	handlers.ParseFlags()
-	if err := http.ListenAndServe(handlers.MainURL, handlers.Router()); err != nil {
+	if err := http.ListenAndServe(handlers.MainURL, server.Router(ms)); err != nil {
 		panic(err)
 	}
 }

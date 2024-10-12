@@ -1,20 +1,22 @@
 package storage
 
 import (
-	"github.com/stretchr/testify/assert"
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/ramil063/gometrics/cmd/server/models"
 )
 
 type MemStorageMock struct {
-	Gauges   map[string]Gauge
-	Counters map[string]Counter
+	Gauges   map[string]models.Gauge
+	Counters map[string]models.Counter
 }
 
 func TestMemStorage_AddCounter(t *testing.T) {
 	type args struct {
 		name  string
-		value Counter
+		value models.Counter
 	}
 	tests := []struct {
 		name           string
@@ -25,7 +27,7 @@ func TestMemStorage_AddCounter(t *testing.T) {
 		{
 			"test 1",
 			MemStorageMock{
-				Counters: map[string]Counter{"counter1": 1},
+				Counters: map[string]models.Counter{"counter1": 1},
 			},
 			args{
 				name:  "counter1",
@@ -51,7 +53,7 @@ func TestMemStorage_AddCounter(t *testing.T) {
 func TestMemStorage_SetGauge(t *testing.T) {
 	type args struct {
 		name  string
-		value Gauge
+		value models.Gauge
 	}
 	tests := []struct {
 		name           string
@@ -62,7 +64,7 @@ func TestMemStorage_SetGauge(t *testing.T) {
 		{
 			"test 1",
 			MemStorageMock{
-				Gauges: map[string]Gauge{"gauge1": 1.1},
+				Gauges: map[string]models.Gauge{"gauge1": 1.1},
 			},
 			args{
 				name:  "gauge1",
@@ -81,21 +83,6 @@ func TestMemStorage_SetGauge(t *testing.T) {
 			}
 			ms.SetGauge(tt.args.name, tt.args.value)
 			assert.Equal(t, tt.want.value, ms.Gauges[tt.args.name])
-		})
-	}
-}
-
-func TestNewMemStorage(t *testing.T) {
-	tests := []struct {
-		name string
-		want string
-	}{
-		{"test 1", "*storage.MemStorage"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ms := NewMemStorage()
-			assert.Equalf(t, tt.want, reflect.ValueOf(ms).Type().String(), "NewMemStorage()")
 		})
 	}
 }
