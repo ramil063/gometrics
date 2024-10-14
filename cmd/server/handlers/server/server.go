@@ -30,10 +30,6 @@ type Storager interface {
 	Counterer
 }
 
-type MemStorager interface {
-	Storager
-}
-
 func NewMemStorage() Storager {
 	return &storage.MemStorage{
 		Gauges:   make(map[string]models.Gauge),
@@ -42,7 +38,7 @@ func NewMemStorage() Storager {
 }
 
 // Router маршрутизация
-func Router(ms MemStorager) chi.Router {
+func Router(ms Storager) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(middlewares.CheckMethodMw)
