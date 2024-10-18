@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/ramil063/gometrics/internal/logger"
 	"net/http"
 
 	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"github.com/ramil063/gometrics/cmd/server/handlers/server"
+	"github.com/ramil063/gometrics/internal/logger"
 )
 
 func main() {
