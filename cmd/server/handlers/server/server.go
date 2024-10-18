@@ -11,6 +11,7 @@ import (
 	"github.com/ramil063/gometrics/cmd/server/handlers/middlewares"
 	"github.com/ramil063/gometrics/cmd/server/models"
 	"github.com/ramil063/gometrics/cmd/server/storage"
+	"github.com/ramil063/gometrics/internal/logger"
 )
 
 type Gauger interface {
@@ -41,7 +42,10 @@ func NewMemStorage() Storager {
 func Router(ms Storager) chi.Router {
 	r := chi.NewRouter()
 
+	r.Use(logger.RequestLogger)
+	r.Use(logger.ResponseLogger)
 	r.Use(middlewares.CheckMethodMw)
+
 	homeHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
 		home(rw, r, ms)
 	}

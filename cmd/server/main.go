@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/ramil063/gometrics/internal/logger"
 	"net/http"
 
 	"github.com/ramil063/gometrics/cmd/server/handlers"
@@ -8,6 +9,9 @@ import (
 )
 
 func main() {
+	if err := logger.Initialize(); err != nil {
+		panic(err)
+	}
 	var ms = server.NewMemStorage()
 
 	handlers.ParseFlags()
