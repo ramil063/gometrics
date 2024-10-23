@@ -1,17 +1,19 @@
 package server
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 
 	"github.com/ramil063/gometrics/cmd/server/handlers/middlewares"
-	"github.com/ramil063/gometrics/cmd/server/models"
 	"github.com/ramil063/gometrics/cmd/server/storage"
 	"github.com/ramil063/gometrics/internal/logger"
+	"github.com/ramil063/gometrics/internal/models"
 )
 
 type Gauger interface {
@@ -51,9 +53,9 @@ func Router(ms Storager) chi.Router {
 	}
 	r.Get("/", homeHandlerFunction)
 
-	r.Route("/update/{type}", func(r chi.Router) {
-		r.Use(middlewares.CheckMetricsTypeMw)
-		r.Route("/{metric}", func(r chi.Router) {
+	r.Route("/update", func(r chi.Router) {
+		r.Route("/{type}/{metric}", func(r chi.Router) {
+			r.Use(middlewares.CheckMetricsTypeMw)
 			r.Use(middlewares.CheckUpdateMetricsNameMw)
 			updateHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
 				update(rw, req, ms)
@@ -61,10 +63,15 @@ func Router(ms Storager) chi.Router {
 			r.With(middlewares.CheckUpdateMetricsValueMw).Post("/", updateHandlerFunction)
 			r.With(middlewares.CheckUpdateMetricsValueMw).Post("/{value}", updateHandlerFunction)
 		})
+
+		updateMetricsJsonHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
+			updateMetricsJson(rw, req, ms)
+		}
+		r.With(middlewares.CheckPostMethodMw).Post("/", updateMetricsJsonHandlerFunction)
 	})
-	r.Route("/value/{type}", func(r chi.Router) {
-		r.Use(middlewares.CheckMetricsTypeMw)
-		r.Route("/{metric}", func(r chi.Router) {
+	r.Route("/value", func(r chi.Router) {
+		r.Route("/{type}/{metric}", func(r chi.Router) {
+			r.Use(middlewares.CheckMetricsTypeMw)
 			r.Use(middlewares.CheckValueMetricsMw)
 			getValueHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
 				getValue(rw, req, ms)
@@ -72,6 +79,10 @@ func Router(ms Storager) chi.Router {
 			r.Get("/", getValueHandlerFunction)
 		})
 
+		getValueMetricsJsonHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
+			getValueMetricsJson(rw, req, ms)
+		}
+		r.With(middlewares.CheckPostMethodMw).Post("/", getValueMetricsJsonHandlerFunction)
 	})
 	return r
 }
@@ -165,4 +176,73 @@ func home(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	if err != nil {
 		return
 	}
+}
+
+// updateMetricsJson метод обновления данных для метрик через json
+func updateMetricsJson(rw http.ResponseWriter, r *http.Request, ms Storager) {
+	// десериализуем запрос в структуру модели
+	logger.Log.Debug("decoding request")
+	var metrics models.Metrics
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&metrics); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	switch metrics.MType {
+	case "gauge":
+		ms.SetGauge(metrics.ID, models.Gauge(*metrics.Value))
+	case "counter":
+		ms.AddCounter(metrics.ID, models.Counter(*metrics.Delta))
+	}
+	enc := json.NewEncoder(rw)
+	if err := enc.Encode(metrics); err != nil {
+		logger.Log.Error("error encoding response", zap.Error(err))
+		return
+	}
+
+	logger.Log.Debug("sending HTTP 200 response")
+}
+
+// getValueMetricsJson метод обновления данных для метрик через json
+func getValueMetricsJson(rw http.ResponseWriter, r *http.Request, ms Storager) {
+	// десериализуем запрос в структуру модели
+	logger.Log.Debug("decoding request")
+	var metrics models.Metrics
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&metrics); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+
+	switch metrics.MType {
+	case "gauge":
+		value, ok := ms.GetGauge(metrics.ID)
+		if !ok {
+			logger.Log.Debug("Error value of gauge is not Ok")
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+		metrics.Value = &value
+	case "counter":
+		delta, ok := ms.GetCounter(metrics.ID)
+		if !ok {
+			logger.Log.Debug("Error value of gauge is not Ok")
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+		metrics.Delta = &delta
+	}
+
+	enc := json.NewEncoder(rw)
+	if err := enc.Encode(metrics); err != nil {
+		logger.Log.Error("error encoding response", zap.Error(err))
+		return
+	}
+
+	logger.Log.Debug("sending HTTP 200 response")
 }

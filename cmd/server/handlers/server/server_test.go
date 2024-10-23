@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/go-resty/resty/v2"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -163,6 +164,114 @@ func TestNewMemStorage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ms := NewMemStorage()
 			assert.Equalf(t, tt.want, reflect.ValueOf(ms).Type().String(), "NewMemStorage()")
+		})
+	}
+}
+
+func Test_updateMetricsJson(t *testing.T) {
+	updateMetricsJsonHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
+		updateMetricsJson(rw, req, NewMemStorage())
+	}
+	handler := http.HandlerFunc(updateMetricsJsonHandlerFunction)
+	srv := httptest.NewServer(handler)
+	defer srv.Close()
+
+	testCases := []struct {
+		name         string // добавляем название тестов
+		method       string
+		body         string // добавляем тело запроса в табличные тесты
+		expectedCode int
+		expectedBody string
+	}{
+		{
+			name:         "test 1",
+			method:       http.MethodPost,
+			expectedCode: http.StatusInternalServerError,
+			expectedBody: "",
+		},
+		{
+			name:         "test 2",
+			method:       http.MethodPost,
+			body:         `{"id": "met1", "type": "gauge", "value": 1.1}`,
+			expectedCode: http.StatusOK,
+			expectedBody: `{"id": "met1", "type": "gauge", "value": 1.1}`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.method, func(t *testing.T) {
+			req := resty.New().R()
+			req.Method = tc.method
+			req.URL = srv.URL
+
+			if len(tc.body) > 0 {
+				req.SetHeader("Content-Type", "application/json")
+				req.SetBody(tc.body)
+			}
+
+			resp, err := req.Send()
+			assert.NoError(t, err, "error making HTTP request")
+
+			assert.Equal(t, tc.expectedCode, resp.StatusCode(), "Response code didn't match expected")
+			// проверяем корректность полученного тела ответа, если мы его ожидаем
+			if tc.expectedBody != "" {
+				assert.JSONEq(t, tc.expectedBody, string(resp.Body()))
+			}
+		})
+	}
+}
+
+func Test_getValueMetricsJson(t *testing.T) {
+	getValueMetricsJsonHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
+		ms := NewMemStorage()
+		ms.SetGauge("met1", 1.1)
+		getValueMetricsJson(rw, req, ms)
+	}
+	handler := http.HandlerFunc(getValueMetricsJsonHandlerFunction)
+	srv := httptest.NewServer(handler)
+	defer srv.Close()
+
+	testCases := []struct {
+		name         string // добавляем название тестов
+		method       string
+		body         string // добавляем тело запроса в табличные тесты
+		expectedCode int
+		expectedBody string
+	}{
+		{
+			name:         "test 1",
+			method:       http.MethodPost,
+			expectedCode: http.StatusInternalServerError,
+			expectedBody: "",
+		},
+		{
+			name:         "test 2",
+			method:       http.MethodPost,
+			body:         `{"id": "met1", "type": "gauge", "value":1.1}`,
+			expectedCode: http.StatusOK,
+			expectedBody: `{"id": "met1", "type": "gauge", "value":1.1}`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.method, func(t *testing.T) {
+			req := resty.New().R()
+			req.Method = tc.method
+			req.URL = srv.URL
+
+			if len(tc.body) > 0 {
+				req.SetHeader("Content-Type", "application/json")
+				req.SetBody(tc.body)
+			}
+
+			resp, err := req.Send()
+			assert.NoError(t, err, "error making HTTP request")
+
+			assert.Equal(t, tc.expectedCode, resp.StatusCode(), "Response code didn't match expected")
+			// проверяем корректность полученного тела ответа, если мы его ожидаем
+			if tc.expectedBody != "" {
+				assert.JSONEq(t, tc.expectedBody, string(resp.Body()))
+			}
 		})
 	}
 }

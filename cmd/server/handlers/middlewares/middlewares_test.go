@@ -1,6 +1,9 @@
 package middlewares
 
 import (
+	"bytes"
+	"encoding/json"
+	"github.com/ramil063/gometrics/internal/models"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -247,6 +250,70 @@ func TestCheckMetricsTypeMw(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
+		})
+	}
+}
+
+func TestCheckPostMethodMw(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+	})
+	srv := httptest.NewServer(handler)
+	defer srv.Close()
+
+	testCases := []struct {
+		name         string // добавляем название тестов
+		method       string
+		body         models.Metrics // добавляем тело запроса в табличные тесты
+		expectedCode int
+		expectedBody string
+	}{
+		{
+			name:         "test 4",
+			method:       http.MethodGet,
+			expectedCode: http.StatusMethodNotAllowed,
+			expectedBody: "",
+		},
+		{
+			name:         "test 5",
+			method:       http.MethodPost,
+			body:         models.Metrics{ID: "metric1", MType: "gauge", Delta: nil, Value: nil},
+			expectedCode: http.StatusOK,
+			expectedBody: "",
+		},
+		{
+			name:         "test 6",
+			method:       http.MethodPost,
+			body:         models.Metrics{ID: "metric2", MType: "counter", Delta: nil, Value: nil},
+			expectedCode: http.StatusOK,
+			expectedBody: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.method, func(t *testing.T) {
+			body, err := json.Marshal(tc.body)
+			request := httptest.NewRequest(tc.method, "/update", bytes.NewReader(body))
+			// создаём новый Recorder
+			w := httptest.NewRecorder()
+
+			handlerToTest := CheckPostMethodMw(handler)
+			handlerToTest.ServeHTTP(w, request)
+
+			res := w.Result()
+			// проверяем код ответа
+			assert.Equal(t, tc.expectedCode, res.StatusCode, "Response code didn't match expected")
+
+			// получаем и проверяем тело запроса
+			defer res.Body.Close()
+			respBody, err := io.ReadAll(res.Body)
+			require.NoError(t, err, "error making HTTP request")
+
+			// проверяем корректность полученного тела ответа, если мы его ожидаем
+			if tc.expectedBody != "" {
+				assert.JSONEq(t, tc.expectedBody, string(respBody))
+			}
 		})
 	}
 }

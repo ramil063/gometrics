@@ -3,10 +3,9 @@ package storage
 import (
 	"math/rand"
 	"runtime"
-)
 
-type Counter uint64
-type Gauge float64
+	"github.com/ramil063/gometrics/internal/models"
+)
 
 type Monitor struct {
 	Alloc,
@@ -33,8 +32,8 @@ type Monitor struct {
 	GCCPUFraction float64
 	NumForcedGC,
 	NumGC uint32
-	PollCount   Counter
-	RandomValue Gauge
+	PollCount   models.Counter
+	RandomValue models.Gauge
 }
 
 func NewMonitor() Monitor {
@@ -73,6 +72,6 @@ func NewMonitor() Monitor {
 	m.Sys = rtm.Sys
 	m.TotalAlloc = rtm.TotalAlloc
 	m.NumGC = rtm.NumGC
-	m.RandomValue = Gauge(rand.Float64())
+	m.RandomValue = models.Gauge(rand.Float64())
 	return m
 }

@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ramil063/gometrics/cmd/server/models"
+	"github.com/ramil063/gometrics/internal/models"
 )
 
 type MemStorageMock struct {
