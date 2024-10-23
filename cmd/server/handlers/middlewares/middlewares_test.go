@@ -293,7 +293,7 @@ func TestCheckPostMethodMw(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.method, func(t *testing.T) {
-			body, err := json.Marshal(tc.body)
+			body, _ := json.Marshal(tc.body)
 			request := httptest.NewRequest(tc.method, "/update", bytes.NewReader(body))
 			// создаём новый Recorder
 			w := httptest.NewRecorder()

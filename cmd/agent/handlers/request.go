@@ -149,12 +149,12 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int) error {
 			typeOfS := v.Type()
 
 			for i := 0; i < v.NumField(); i++ {
-				metricId := typeOfS.Field(i).Name
+				metricID := typeOfS.Field(i).Name
 				metricValue, _ := strconv.ParseFloat(fmt.Sprintf("%v", v.Field(i).Interface()), 64)
 				delta := int64(m.PollCount)
 
 				metrics := models.Metrics{
-					ID:    metricId,
+					ID:    metricID,
 					MType: "gauge",
 					Delta: nil,
 					Value: &metricValue,
