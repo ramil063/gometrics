@@ -15,12 +15,12 @@ import (
 	"github.com/ramil063/gometrics/internal/models"
 )
 
-type JsonRequester interface {
-	SendMetricsJson(c JsonClienter, maxCount int) error
+type JSONRequester interface {
+	SendMetricsJSON(c JSONClienter, maxCount int) error
 }
 
 type Requester interface {
-	JsonRequester
+	JSONRequester
 	SendMetrics(c Clienter, maxCount int) error
 }
 
@@ -29,7 +29,7 @@ type Clienter interface {
 	NewRequest(method string, url string) (*http.Request, error)
 }
 
-type JsonClienter interface {
+type JSONClienter interface {
 	Clienter
 	SendPostRequestWithBody(url string, body []byte) error
 }
@@ -47,7 +47,7 @@ func NewClient() Clienter {
 	}
 }
 
-func NewJsonClient() JsonClienter {
+func NewJSONClient() JSONClienter {
 	return client{
 		httpClient: &http.Client{},
 	}
@@ -127,8 +127,8 @@ func (r request) SendMetrics(c Clienter, maxCount int) error {
 	return nil
 }
 
-// SendMetricsJson отправка метрик
-func (r request) SendMetricsJson(c JsonClienter, maxCount int) error {
+// SendMetricsJSON отправка метрик
+func (r request) SendMetricsJSON(c JSONClienter, maxCount int) error {
 	var interval = 1 * time.Second
 	count := 0
 	seconds := 0

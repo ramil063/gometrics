@@ -64,10 +64,10 @@ func Router(ms Storager) chi.Router {
 			r.With(middlewares.CheckUpdateMetricsValueMw).Post("/{value}", updateHandlerFunction)
 		})
 
-		updateMetricsJsonHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-			updateMetricsJson(rw, req, ms)
+		updateMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
+			updateMetricsJSON(rw, req, ms)
 		}
-		r.With(middlewares.CheckPostMethodMw).Post("/", updateMetricsJsonHandlerFunction)
+		r.With(middlewares.CheckPostMethodMw).Post("/", updateMetricsJSONHandlerFunction)
 	})
 	r.Route("/value", func(r chi.Router) {
 		r.Route("/{type}/{metric}", func(r chi.Router) {
@@ -79,10 +79,10 @@ func Router(ms Storager) chi.Router {
 			r.Get("/", getValueHandlerFunction)
 		})
 
-		getValueMetricsJsonHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-			getValueMetricsJson(rw, req, ms)
+		getValueMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
+			getValueMetricsJSON(rw, req, ms)
 		}
-		r.With(middlewares.CheckPostMethodMw).Post("/", getValueMetricsJsonHandlerFunction)
+		r.With(middlewares.CheckPostMethodMw).Post("/", getValueMetricsJSONHandlerFunction)
 	})
 	return r
 }
@@ -178,8 +178,8 @@ func home(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	}
 }
 
-// updateMetricsJson метод обновления данных для метрик через json
-func updateMetricsJson(rw http.ResponseWriter, r *http.Request, ms Storager) {
+// updateMetricsJSON метод обновления данных для метрик через json
+func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	// десериализуем запрос в структуру модели
 	logger.Log.Debug("decoding request")
 	var metrics models.Metrics
@@ -205,8 +205,8 @@ func updateMetricsJson(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	logger.Log.Debug("sending HTTP 200 response")
 }
 
-// getValueMetricsJson метод обновления данных для метрик через json
-func getValueMetricsJson(rw http.ResponseWriter, r *http.Request, ms Storager) {
+// getValueMetricsJSON метод обновления данных для метрик через json
+func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	// десериализуем запрос в структуру модели
 	logger.Log.Debug("decoding request")
 	var metrics models.Metrics

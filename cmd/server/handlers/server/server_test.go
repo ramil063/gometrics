@@ -168,11 +168,11 @@ func TestNewMemStorage(t *testing.T) {
 	}
 }
 
-func Test_updateMetricsJson(t *testing.T) {
-	updateMetricsJsonHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-		updateMetricsJson(rw, req, NewMemStorage())
+func Test_updateMetricsJSON(t *testing.T) {
+	updateMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
+		updateMetricsJSON(rw, req, NewMemStorage())
 	}
-	handler := http.HandlerFunc(updateMetricsJsonHandlerFunction)
+	handler := http.HandlerFunc(updateMetricsJSONHandlerFunction)
 	srv := httptest.NewServer(handler)
 	defer srv.Close()
 
@@ -221,13 +221,13 @@ func Test_updateMetricsJson(t *testing.T) {
 	}
 }
 
-func Test_getValueMetricsJson(t *testing.T) {
-	getValueMetricsJsonHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
+func Test_getValueMetricsJSON(t *testing.T) {
+	getValueMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
 		ms := NewMemStorage()
 		ms.SetGauge("met1", 1.1)
-		getValueMetricsJson(rw, req, ms)
+		getValueMetricsJSON(rw, req, ms)
 	}
-	handler := http.HandlerFunc(getValueMetricsJsonHandlerFunction)
+	handler := http.HandlerFunc(getValueMetricsJSONHandlerFunction)
 	srv := httptest.NewServer(handler)
 	defer srv.Close()
 

@@ -19,7 +19,7 @@ type RequestMock struct {
 type ClientMock struct {
 	Client client
 }
-type JsonClientMock struct {
+type JSONClientMock struct {
 	ClientMock
 }
 
@@ -32,7 +32,7 @@ func (c ClientMock) NewRequest(method string, url string) (*http.Request, error)
 	return httptest.NewRequest(method, url, nil), nil
 }
 
-func (c JsonClientMock) SendPostRequestWithBody(url string, body []byte) error {
+func (c JSONClientMock) SendPostRequestWithBody(url string, body []byte) error {
 	_ = httptest.NewRequest("POST", url, bytes.NewReader(body))
 	return nil
 }
@@ -65,7 +65,7 @@ func Test_request_SendMetrics(t *testing.T) {
 	}
 }
 
-func Test_request_SendMetricsJson(t *testing.T) {
+func Test_request_SendMetricsJSON(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
@@ -74,7 +74,7 @@ func Test_request_SendMetricsJson(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := request{}
-			assert.NoError(t, r.SendMetricsJson(JsonClientMock{}, 5))
+			assert.NoError(t, r.SendMetricsJSON(JSONClientMock{}, 5))
 		})
 	}
 }
@@ -93,7 +93,7 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
-func TestNewJsonClient(t *testing.T) {
+func TestNewJSONClient(t *testing.T) {
 	tests := []struct {
 		name string
 		want string
@@ -102,7 +102,7 @@ func TestNewJsonClient(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, reflect.ValueOf(NewJsonClient()).Type().String(), "NewJsonClient()")
+			assert.Equalf(t, tt.want, reflect.ValueOf(NewJSONClient()).Type().String(), "NewJSONClient()")
 		})
 	}
 }
@@ -141,7 +141,7 @@ func Test_client_SendPostRequestWithBody(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := JsonClientMock{}
+			c := JSONClientMock{}
 			tt.wantErr(t, c.SendPostRequestWithBody(tt.args.url, tt.args.body), fmt.Sprintf("SendPostRequestWithBody(%v, %v)", tt.args.url, tt.args.body))
 		})
 	}
