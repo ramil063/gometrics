@@ -7,9 +7,9 @@ import (
 
 func main() {
 	handlers.ParseFlags()
-	c := handlers.NewClient()
+	c := handlers.NewJSONClient()
 	r := handlers.NewRequest()
-	var err = r.SendMetrics(c, 100)
+	var err = r.SendMetricsJSON(c, 100)
 	if err != nil {
 		log.Fatal(err)
 	}
