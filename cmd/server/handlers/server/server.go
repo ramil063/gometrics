@@ -189,6 +189,8 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	logMsg, _ := json.Marshal(metrics)
+	logger.Log.Info("", zap.String("request body", string(logMsg)))
 
 	switch metrics.MType {
 	case "gauge":

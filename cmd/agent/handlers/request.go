@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"go.uber.org/zap"
 	"log"
 	"net/http"
 	"reflect"
@@ -118,6 +119,7 @@ func (r request) SendMetrics(c Clienter, maxCount int) error {
 
 				err := c.SendPostRequest(url)
 				if err != nil {
+					logger.Log.Error("Send request error: " + err.Error())
 					log.Fatal("Error", err)
 					return err
 				}
@@ -138,7 +140,7 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int) error {
 		<-time.After(interval)
 		seconds++
 		if (seconds % PollInterval) == 0 {
-			log.Println("get metrics")
+			log.Println("get metrics json")
 			m = storage.NewMonitor()
 			m.PollCount = models.Counter(count)
 			count++
@@ -147,6 +149,7 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int) error {
 		if (seconds % ReportInterval) == 0 {
 			v := reflect.ValueOf(m)
 			typeOfS := v.Type()
+			log.Println("send metrics json")
 
 			for i := 0; i < v.NumField(); i++ {
 				metricID := typeOfS.Field(i).Name
@@ -169,12 +172,12 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int) error {
 				url := "http://" + MainURL + "/update"
 				body, err := json.Marshal(metrics)
 				if err != nil {
-					logger.Log.Error("Error marshal metrics" + err.Error())
+					logger.Log.Error("Error marshal metrics", zap.Error(err))
 				}
 
 				err = c.SendPostRequestWithBody(url, body)
 				if err != nil {
-					logger.Log.Fatal("Error in request: " + err.Error())
+					logger.Log.Fatal("Error in request", zap.Error(err))
 					return err
 				}
 			}

@@ -17,6 +17,7 @@ type (
 	loggingResponseWriter struct {
 		http.ResponseWriter // встраиваем оригинальный http.ResponseWriter
 		responseData        *responseData
+		body                string
 	}
 )
 
@@ -24,6 +25,7 @@ func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	// записываем ответ, используя оригинальный http.ResponseWriter
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size // захватываем размер
+	r.body = string(b)
 	return size, err
 }
 
@@ -49,6 +51,7 @@ func ResponseLogger(h http.Handler) http.Handler {
 		Log.Info("got out coming HTTP response",
 			zap.Int("status", responseData.status),
 			zap.Int("size", responseData.size),
+			zap.String("response body", lw.body),
 		)
 	})
 }

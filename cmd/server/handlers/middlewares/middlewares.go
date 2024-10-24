@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 
@@ -44,7 +43,7 @@ func CheckUpdateMetricsNameMw(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("metric") == "" {
-			log.Println("Error metric name is empty")
+			logger.Log.Debug("Error metric name is empty")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -70,7 +69,7 @@ func CheckUpdateMetricsValueMw(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("value") == "" {
-			log.Println("Error in metric value")
+			logger.Log.Debug("Error in metric value")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -103,12 +102,12 @@ func CheckUpdateMetricsValueMw(next http.Handler) http.Handler {
 		}
 
 		if !issetMetricData {
-			log.Println("Error in metric data(update)")
+			logger.Log.Debug("Error in metric data(update)")
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		if !issetCorrectValue {
-			log.Println("Error in metric value(update)")
+			logger.Log.Debug("Error in metric value(update)")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -125,13 +124,13 @@ func CheckValueMetricsMw(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("type") != "gauge" && r.PathValue("type") != "counter" {
-			log.Println("Error in metric type")
+			logger.Log.Debug("Error in metric type")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		if r.PathValue("metric") == "" {
-			log.Println("Error in metric name")
+			logger.Log.Debug("Error in metric name")
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
