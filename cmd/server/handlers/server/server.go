@@ -180,6 +180,7 @@ func home(rw http.ResponseWriter, r *http.Request, ms Storager) {
 
 // updateMetricsJSON метод обновления данных для метрик через json
 func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
+
 	// десериализуем запрос в структуру модели
 	logger.Log.Debug("decoding request")
 	var metrics models.Metrics
@@ -189,6 +190,9 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
+
 	logMsg, _ := json.Marshal(metrics)
 	logger.Log.Info("", zap.String("request body", string(logMsg)))
 
