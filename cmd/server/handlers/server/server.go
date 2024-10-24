@@ -197,7 +197,10 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 		ms.SetGauge(metrics.ID, models.Gauge(*metrics.Value))
 	case "counter":
 		ms.AddCounter(metrics.ID, models.Counter(*metrics.Delta))
+		newCounter, _ := ms.GetCounter(metrics.ID)
+		metrics.Delta = &newCounter
 	}
+
 	enc := json.NewEncoder(rw)
 	if err := enc.Encode(metrics); err != nil {
 		logger.Log.Error("error encoding response", zap.Error(err))
