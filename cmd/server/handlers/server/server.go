@@ -2,14 +2,17 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
+	agentStorage "github.com/ramil063/gometrics/cmd/agent/storage"
 	"github.com/ramil063/gometrics/cmd/server/handlers/middlewares"
 	"github.com/ramil063/gometrics/cmd/server/storage"
 	"github.com/ramil063/gometrics/internal/logger"
@@ -194,7 +197,7 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	logMsg, _ := json.Marshal(metrics)
-	logger.Log.Info("", zap.String("request body", string(logMsg)))
+	logger.Log.Info("", zap.String("request body in update/", string(logMsg)))
 
 	switch metrics.MType {
 	case "gauge":
@@ -228,29 +231,50 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	logger.Log.Info("request body in value/", zap.String("metrics{ID, MType}", metrics.ID+","+metrics.MType))
 
 	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	rw.Header().Set("Content-Type", "application/json")
 
 	switch metrics.MType {
 	case "gauge":
 		value, ok := ms.GetGauge(metrics.ID)
 		if !ok {
 			logger.Log.Info("Error value of gauge is not Ok ID:" + metrics.ID)
+			ms.SetGauge(metrics.ID, 0)
 			value = 0
 		}
 		metrics.Value = &value
 	case "counter":
+		ms.AddCounter(metrics.ID, models.Counter(0))
 		delta, ok := ms.GetCounter(metrics.ID)
 		if !ok {
-			logger.Log.Info("Error value of gauge is not Ok ID:" + metrics.ID)
-			delta = 0
+			logger.Log.Info("Error value of counter is not Ok ID:" + metrics.ID)
 		}
 		metrics.Delta = &delta
 	}
+
+	m := agentStorage.NewMonitor()
+	PrepareStorageValues(ms, m)
 
 	enc := json.NewEncoder(rw)
 	if err := enc.Encode(metrics); err != nil {
 		logger.Log.Error("error encoding response", zap.Error(err))
 		return
 	}
-
 	logger.Log.Debug("sending HTTP 200 response")
+}
+
+func PrepareStorageValues(ms Storager, m agentStorage.Monitor) {
+	v := reflect.ValueOf(m)
+	typeOfS := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		metricID := typeOfS.Field(i).Name
+		metricValue, _ := strconv.ParseFloat(fmt.Sprintf("%v", v.Field(i).Interface()), 64)
+
+		if typeOfS.Field(i).Name == "PollCount" {
+			ms.AddCounter(metricID, models.Counter(1))
+		} else {
+			ms.SetGauge(metricID, models.Gauge(metricValue))
+		}
+	}
 }
