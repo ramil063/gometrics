@@ -44,8 +44,8 @@ func NewMemStorage() Storager {
 func Router(ms Storager) chi.Router {
 	r := chi.NewRouter()
 
-	r.Use(logger.RequestLogger)
 	r.Use(logger.ResponseLogger)
+	r.Use(logger.RequestLogger)
 	r.Use(middlewares.CheckMethodMw)
 
 	homeHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
@@ -225,6 +225,7 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	logger.Log.Info("request body in value/", zap.String("metrics{ID, MType}", metrics.ID+","+metrics.MType))
 
 	rw.Header().Set("Content-Type", "application/json")
 
@@ -232,17 +233,15 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	case "gauge":
 		value, ok := ms.GetGauge(metrics.ID)
 		if !ok {
-			logger.Log.Debug("Error value of gauge is not Ok")
-			rw.WriteHeader(http.StatusNotFound)
-			return
+			logger.Log.Info("Error value of gauge is not Ok ID:" + metrics.ID)
+			value = 0
 		}
 		metrics.Value = &value
 	case "counter":
 		delta, ok := ms.GetCounter(metrics.ID)
 		if !ok {
-			logger.Log.Debug("Error value of gauge is not Ok")
-			rw.WriteHeader(http.StatusNotFound)
-			return
+			logger.Log.Info("Error value of gauge is not Ok ID:" + metrics.ID)
+			delta = 0
 		}
 		metrics.Delta = &delta
 	}
