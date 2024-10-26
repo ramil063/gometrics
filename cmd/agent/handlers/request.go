@@ -74,6 +74,7 @@ func (c client) SendPostRequest(url string) error {
 func (c client) SendPostRequestWithBody(url string, body []byte) error {
 	req, _ := http.NewRequest("POST", url, bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept-Encoding", "gzip")
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
