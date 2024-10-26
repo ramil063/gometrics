@@ -319,7 +319,7 @@ func TestCheckPostMethodMw(t *testing.T) {
 	}
 }
 
-func TestGzipCompression(t *testing.T) {
+func TestGZIPMiddleware(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Accept-Encoding", "gzip")
 		w.WriteHeader(http.StatusOK)
