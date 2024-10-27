@@ -137,7 +137,7 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int) error {
 	seconds := 0
 	var m storage.Monitor
 
-	for count < maxCount {
+	for seconds < maxCount {
 		<-time.After(interval)
 		seconds++
 		if (seconds % PollInterval) == 0 {
@@ -178,8 +178,7 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int) error {
 
 				err = c.SendPostRequestWithBody(url, body)
 				if err != nil {
-					logger.Log.Fatal("Error in request", zap.Error(err))
-					return err
+					logger.Log.Error("Error in request", zap.Error(err))
 				}
 			}
 		}

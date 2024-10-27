@@ -28,6 +28,9 @@ type Monitor struct {
 	PauseTotalNs,
 	StackInuse,
 	Sys,
+	StackSys,
+	MSpanInuse,
+	MSpanSys,
 	TotalAlloc uint64
 	GCCPUFraction float64
 	NumForcedGC,
@@ -49,6 +52,9 @@ func NewMonitor() Monitor {
 	m.Mallocs = rtm.Mallocs
 	m.Frees = rtm.Frees
 
+	m.StackSys = rtm.StackSys
+	m.MSpanInuse = rtm.MSpanInuse
+	m.MSpanSys = rtm.MSpanSys
 	m.BuckHashSys = rtm.BuckHashSys
 	m.Frees = rtm.Frees
 	m.GCCPUFraction = rtm.GCCPUFraction
