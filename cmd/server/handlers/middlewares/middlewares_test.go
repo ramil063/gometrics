@@ -327,6 +327,7 @@ func TestGZIPMiddleware(t *testing.T) {
 		var metrics models.Metrics
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&metrics); err != nil {
+			log.Println(err)
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -364,8 +365,9 @@ func TestGZIPMiddleware(t *testing.T) {
 
 		r := httptest.NewRequest("POST", srv.URL, buf)
 		r.RequestURI = ""
+		r.Header.Set("Accept-Encoding", "gzip")
 		r.Header.Set("Content-Encoding", "gzip")
-		r.Header.Set("Accept-Encoding", "")
+		r.Header.Set("Content-Type", "application/json")
 
 		resp, err := http.DefaultClient.Do(r)
 		require.NoError(t, err)
