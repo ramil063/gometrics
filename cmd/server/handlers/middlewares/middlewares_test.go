@@ -4,14 +4,17 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"github.com/ramil063/gometrics/internal/models"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ramil063/gometrics/cmd/server/storage"
+	"github.com/ramil063/gometrics/internal/models"
 )
 
 func TestCheckMethodMw(t *testing.T) {
@@ -320,9 +323,28 @@ func TestCheckPostMethodMw(t *testing.T) {
 }
 
 func TestGZIPMiddleware(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Accept-Encoding", "gzip")
-		w.WriteHeader(http.StatusOK)
+	handler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		var metrics models.Metrics
+		dec := json.NewDecoder(r.Body)
+		if err := dec.Decode(&metrics); err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		ms := &storage.MemStorage{
+			Gauges:   make(map[string]models.Gauge),
+			Counters: make(map[string]models.Counter),
+		}
+
+		ms.AddCounter(metrics.ID, models.Counter(0))
+		delta, _ := ms.GetCounter(metrics.ID)
+		metrics.Delta = &delta
+
+		rw.Header().Set("Content-Type", "application/json")
+
+		enc := json.NewEncoder(rw)
+		if err := enc.Encode(metrics); err != nil {
+			return
+		}
 	})
 	srv := httptest.NewServer(GZIPMiddleware(handler))
 	defer srv.Close()
@@ -354,19 +376,30 @@ func TestGZIPMiddleware(t *testing.T) {
 	})
 
 	t.Run("accepts_gzip", func(t *testing.T) {
-		buf := bytes.NewBufferString(requestBody)
+		buf := bytes.NewBuffer(nil)
+		zb := gzip.NewWriter(buf)
+		_, err := zb.Write([]byte(requestBody))
+		require.NoError(t, err)
+		err = zb.Close()
+		require.NoError(t, err)
 		r := httptest.NewRequest("POST", srv.URL, buf)
 		r.RequestURI = ""
 		r.Header.Set("Accept-Encoding", "gzip")
+		r.Header.Set("Content-Encoding", "gzip")
+		r.Header.Set("Content-Type", "application/json")
 
 		resp, err := http.DefaultClient.Do(r)
-		require.NoError(t, err)
+
+		require.NoError(t, err, "error making HTTP request")
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
 		defer resp.Body.Close()
+		log.Println(resp.Header.Get("Accept-Encoding"))
 
-		_, err = gzip.NewReader(resp.Body)
-		require.NoError(t, err)
+		zr, err := gzip.NewReader(resp.Body)
+		require.NoError(t, err, "error in new reader")
 
+		_, err = io.ReadAll(zr)
+		require.NoError(t, err, "error in read all")
 	})
 }

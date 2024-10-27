@@ -3,13 +3,14 @@ package handlers
 import (
 	"bytes"
 	"compress/gzip"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewCompressReader(t *testing.T) {
@@ -81,7 +82,7 @@ func Test_compressReader_Close(t *testing.T) {
 
 			r := httptest.NewRequest("POST", "/value", buf)
 
-			got, err := NewCompressReader(r.Body)
+			got, _ := NewCompressReader(r.Body)
 
 			assert.NoError(t, got.Close(), "error in close")
 		})
@@ -112,7 +113,7 @@ func Test_compressReader_Read(t *testing.T) {
 			got, err := NewCompressReader(r.Body)
 			require.NoError(t, err, "error in creation")
 
-			gotN, err := got.Read(tt.args.p)
+			gotN, _ := got.Read(tt.args.p)
 			assert.Equalf(t, tt.wantN, gotN, "error in byte count")
 		})
 	}
