@@ -140,7 +140,7 @@ func Test_home(t *testing.T) {
 		url  string
 		want want
 	}{
-		{"test 1", "/", want{200, "", "text/html; charset=utf-8"}},
+		{"test 1", "/", want{200, "", "text/html"}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

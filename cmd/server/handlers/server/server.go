@@ -125,9 +125,9 @@ func getValue(rw http.ResponseWriter, r *http.Request, ms Storager) {
 			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
-		rw.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		rw.Header().Set("Content-Type", "text/plain")
 		rw.WriteHeader(http.StatusOK)
-		rw.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		rw.Header().Set("Content-Type", "text/plain")
 		_, err = io.WriteString(rw, strconv.FormatFloat(value, 'f', -1, 64))
 	case "counter":
 		value, ok := ms.GetCounter(metricName)
@@ -136,9 +136,9 @@ func getValue(rw http.ResponseWriter, r *http.Request, ms Storager) {
 			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
-		rw.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		rw.Header().Set("Content-Type", "text/plain")
 		rw.WriteHeader(http.StatusOK)
-		rw.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		rw.Header().Set("Content-Type", "text/plain")
 		_, err = io.WriteString(rw, strconv.FormatInt(value, 10))
 	}
 	if err != nil {
@@ -148,8 +148,9 @@ func getValue(rw http.ResponseWriter, r *http.Request, ms Storager) {
 
 // Home метод получения данных из всех метрик
 func home(rw http.ResponseWriter, r *http.Request, ms Storager) {
+	rw.Header().Set("Content-Type", "text/html")
 	rw.WriteHeader(http.StatusOK)
-	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+	rw.Header().Set("Content-Type", "text/html")
 
 	bodyGauge := ""
 	for key, g := range ms.GetGauges() {
