@@ -195,7 +195,7 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 		return
 	}
 
-	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
+	rw.Header().Set("Content-Type", "application/json")
 
 	logMsg, _ := json.Marshal(metrics)
 	logger.Log.Info("", zap.String("request body in update/", string(logMsg)))
