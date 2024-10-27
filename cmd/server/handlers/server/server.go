@@ -196,6 +196,8 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	}
 
 	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	rw.Header().Set("Content-Type", "application/json")
 
 	logMsg, _ := json.Marshal(metrics)
 	logger.Log.Info("", zap.String("request body in update/", string(logMsg)))
