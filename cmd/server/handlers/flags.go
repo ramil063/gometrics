@@ -40,7 +40,7 @@ func ParseFlags() {
 		FileStoragePath = ev.FileStoragePath
 	}
 
-	if ev.Restore != false {
+	if ev.Restore {
 		Restore = ev.Restore
 	}
 }
