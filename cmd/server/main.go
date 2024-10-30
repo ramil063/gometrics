@@ -2,10 +2,11 @@ package main
 
 import (
 	"net/http"
+	"time"
 
-	agentStorage "github.com/ramil063/gometrics/cmd/agent/storage"
 	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"github.com/ramil063/gometrics/cmd/server/handlers/server"
+	"github.com/ramil063/gometrics/cmd/server/storage"
 	"github.com/ramil063/gometrics/internal/logger"
 )
 
@@ -14,8 +15,11 @@ func main() {
 		panic(err)
 	}
 	var ms = server.NewMemStorage()
-	m := agentStorage.NewMonitor()
+	m := storage.GetMonitor(handlers.Restore)
 	server.PrepareStorageValues(ms, m)
+
+	ticker := time.NewTicker(time.Second)
+	go storage.SaveMonitorPerSeconds(server.MaxSaverWorkTime, ticker, handlers.StoreInterval, handlers.FileStoragePath)
 
 	handlers.ParseFlags()
 	if err := http.ListenAndServe(handlers.MainURL, server.Router(ms)); err != nil {

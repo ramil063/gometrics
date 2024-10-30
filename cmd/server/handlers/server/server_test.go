@@ -1,15 +1,19 @@
 package server
 
 import (
-	"github.com/go-resty/resty/v2"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ramil063/gometrics/cmd/agent/storage"
+	"github.com/ramil063/gometrics/cmd/server/filer"
+	"github.com/ramil063/gometrics/cmd/server/handlers"
 )
 
 func Test_update(t *testing.T) {
@@ -222,6 +226,16 @@ func Test_updateMetricsJSON(t *testing.T) {
 }
 
 func Test_getValueMetricsJSON(t *testing.T) {
+	filePath := "../../../../internal/storage/files/test.json"
+
+	var m = storage.NewMonitor()
+	w, _ := filer.NewWriter(filePath)
+	err := w.WriteMonitor(&m)
+	if err != nil {
+		return
+	}
+
+	handlers.FileStoragePath = filePath
 	getValueMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
 		ms := NewMemStorage()
 		ms.SetGauge("met1", 1.1)
@@ -272,6 +286,30 @@ func Test_getValueMetricsJSON(t *testing.T) {
 			if tc.expectedBody != "" {
 				assert.JSONEq(t, tc.expectedBody, string(resp.Body()))
 			}
+		})
+	}
+}
+
+func TestPrepareStorageValues(t *testing.T) {
+	type args struct {
+		ms Storager
+		m  storage.Monitor
+	}
+	a := args{
+		ms: NewMemStorage(),
+		m:  storage.NewMonitor(),
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{"test 1", a},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			PrepareStorageValues(tt.args.ms, tt.args.m)
+			pc, _ := tt.args.ms.GetCounter("PollCount")
+			assert.Equal(t, pc, int64(tt.args.m.PollCount+1))
 		})
 	}
 }

@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"io"
 	"log"
 	"net/http"
@@ -18,6 +19,8 @@ import (
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
+
+var MaxSaverWorkTime = 1000
 
 type Gauger interface {
 	SetGauge(name string, value models.Gauge)
@@ -256,7 +259,7 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 		metrics.Delta = &delta
 	}
 
-	m := agentStorage.NewMonitor()
+	m := storage.GetMonitor(handlers.Restore)
 	PrepareStorageValues(ms, m)
 
 	enc := json.NewEncoder(rw)
