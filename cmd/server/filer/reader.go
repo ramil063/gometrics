@@ -3,8 +3,10 @@ package filer
 import (
 	"bufio"
 	"encoding/json"
-	"github.com/ramil063/gometrics/cmd/agent/storage"
 	"os"
+	"path/filepath"
+
+	"github.com/ramil063/gometrics/cmd/agent/storage"
 )
 
 type Reader struct {
@@ -14,6 +16,13 @@ type Reader struct {
 }
 
 func NewReader(filename string) (*Reader, error) {
+	if _, err := os.Stat(filepath.Dir(filename)); os.IsNotExist(err) {
+		err := os.MkdirAll(filepath.Dir(filename), 0755)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	file, err := os.OpenFile(filename, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err

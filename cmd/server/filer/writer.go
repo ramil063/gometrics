@@ -3,8 +3,9 @@ package filer
 import (
 	"bufio"
 	"encoding/json"
-	"github.com/ramil063/gometrics/cmd/agent/storage"
 	"os"
+
+	"github.com/ramil063/gometrics/cmd/agent/storage"
 )
 
 type Writer struct {
