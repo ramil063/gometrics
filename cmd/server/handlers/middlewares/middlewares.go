@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"github.com/ramil063/gometrics/cmd/server/storage"
 	"net/http"
 	"strconv"
 	"strings"
@@ -185,5 +186,19 @@ func GZIPMiddleware(next http.Handler) http.Handler {
 
 		// передаём управление хендлеру
 		next.ServeHTTP(ow, r)
+	})
+}
+
+func SaveMonitorToFile(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handlers.StoreInterval == 0 {
+			logger.Log.Info("Save metrics with store interval 0")
+
+			err := storage.SaveMonitor(handlers.FileStoragePath)
+			if err != nil {
+				logger.Log.Error("Error saving monitor to file", zap.Error(err))
+			}
+		}
+		next.ServeHTTP(w, r)
 	})
 }

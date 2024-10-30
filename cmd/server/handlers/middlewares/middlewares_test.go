@@ -274,20 +274,20 @@ func TestCheckPostMethodMw(t *testing.T) {
 		expectedBody string
 	}{
 		{
-			name:         "test 4",
+			name:         "test 1",
 			method:       http.MethodGet,
 			expectedCode: http.StatusMethodNotAllowed,
 			expectedBody: "",
 		},
 		{
-			name:         "test 5",
+			name:         "test 2",
 			method:       http.MethodPost,
 			body:         models.Metrics{ID: "metric1", MType: "gauge", Delta: nil, Value: nil},
 			expectedCode: http.StatusOK,
 			expectedBody: "",
 		},
 		{
-			name:         "test 6",
+			name:         "test 3",
 			method:       http.MethodPost,
 			body:         models.Metrics{ID: "metric2", MType: "counter", Delta: nil, Value: nil},
 			expectedCode: http.StatusOK,
@@ -404,4 +404,49 @@ func TestGZIPMiddleware(t *testing.T) {
 		_, err = io.ReadAll(zr)
 		require.NoError(t, err, "error in read all")
 	})
+}
+
+func TestSaveMonitorToFile(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+	})
+	srv := httptest.NewServer(handler)
+	defer srv.Close()
+
+	tests := []struct {
+		name         string // добавляем название тестов
+		method       string
+		body         models.Metrics // добавляем тело запроса в табличные тесты
+		expectedCode int
+	}{
+		{
+			name:         "test 1",
+			method:       http.MethodPost,
+			body:         models.Metrics{ID: "metric2", MType: "counter", Delta: nil, Value: nil},
+			expectedCode: http.StatusOK,
+		},
+	}
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+			body, _ := json.Marshal(tt.body)
+			request := httptest.NewRequest(tt.method, "/update", bytes.NewReader(body))
+			// создаём новый Recorder
+			w := httptest.NewRecorder()
+
+			handlerToTest := SaveMonitorToFile(handler)
+			handlerToTest.ServeHTTP(w, request)
+
+			res := w.Result()
+			// проверяем код ответа
+			assert.Equal(t, tt.expectedCode, res.StatusCode, "Response code didn't match expected")
+
+			// получаем и проверяем тело запроса
+			defer res.Body.Close()
+			_, err := io.ReadAll(res.Body)
+			require.NoError(t, err, "error making HTTP request")
+
+		})
+	}
 }

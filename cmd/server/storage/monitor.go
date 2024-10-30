@@ -23,10 +23,19 @@ func GetMonitor(restore bool) storage.Monitor {
 
 		m, err = Reader.ReadMonitor()
 		if err != nil {
+			logger.Log.Info("error in read monitor", zap.Error(err))
 			temp := storage.NewMonitor()
 			temp.PollCount = 0
 			m = &temp
-			logger.Log.Error("error read monitor", zap.Error(err))
+			Writer, err := filer.NewWriter(handlers.FileStoragePath)
+			if err != nil {
+				logger.Log.Error("error create monitor writer", zap.Error(err))
+			}
+			defer Writer.Close()
+			err = Writer.WriteMonitor(m)
+			if err != nil {
+				logger.Log.Error("error write monitor", zap.Error(err))
+			}
 		}
 		return *m
 	}
@@ -37,26 +46,34 @@ func GetMonitor(restore bool) storage.Monitor {
 
 // SaveMonitorPerSeconds сохранение метрик в единицу времени
 func SaveMonitorPerSeconds(workTime int, ticker *time.Ticker, storeInterval int, filePath string) error {
-
+	if storeInterval == 0 {
+		return nil
+	}
 	for workSecond < workTime {
 		<-ticker.C
 		workSecond++
 		if (workSecond % storeInterval) == 0 {
-			log.Println("save metrics")
-			m := storage.NewMonitor()
-			Writer, err := filer.NewWriter(filePath)
-			if err != nil {
-				logger.Log.Error("error create monitor writer", zap.Error(err))
-				return err
-			}
-			defer Writer.Close()
-
-			err = Writer.WriteMonitor(&m)
-			if err != nil {
-				logger.Log.Error("error write monitor", zap.Error(err))
-				return err
-			}
+			return SaveMonitor(filePath)
 		}
+	}
+	return nil
+}
+
+// SaveMonitor сохранение метрик
+func SaveMonitor(filePath string) error {
+	log.Println("save metrics")
+	m := storage.NewMonitor()
+	Writer, err := filer.NewWriter(filePath)
+	if err != nil {
+		logger.Log.Error("error create monitor writer", zap.Error(err))
+		return err
+	}
+	defer Writer.Close()
+
+	err = Writer.WriteMonitor(&m)
+	if err != nil {
+		logger.Log.Error("error write monitor", zap.Error(err))
+		return err
 	}
 	return nil
 }
