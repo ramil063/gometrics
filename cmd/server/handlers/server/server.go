@@ -20,7 +20,7 @@ import (
 	"github.com/ramil063/gometrics/internal/models"
 )
 
-var MaxSaverWorkTime = 1000
+var MaxSaverWorkTime = 900000
 
 type Gauger interface {
 	SetGauge(name string, value models.Gauge)

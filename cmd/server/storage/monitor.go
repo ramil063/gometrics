@@ -24,13 +24,15 @@ func GetMonitor(restore bool) storage.Monitor {
 		m, err = Reader.ReadMonitor()
 		if err != nil {
 			temp := storage.NewMonitor()
+			temp.PollCount = 0
 			m = &temp
 			logger.Log.Error("error read monitor", zap.Error(err))
 		}
 		return *m
 	}
-
-	return storage.NewMonitor()
+	res := storage.NewMonitor()
+	res.PollCount = 0
+	return res
 }
 
 // SaveMonitorPerSeconds сохранение метрик в единицу времени
@@ -58,7 +60,3 @@ func SaveMonitorPerSeconds(workTime int, ticker *time.Ticker, storeInterval int,
 	}
 	return nil
 }
-
-/**
-писать тесты тесты тесты
-*/
