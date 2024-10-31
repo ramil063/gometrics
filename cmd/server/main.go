@@ -15,14 +15,22 @@ func main() {
 		panic(err)
 	}
 
-	logger.Log.Info("--------------START SERVER-------------")
+	logger.WriteInfoLog("--------------START SERVER-------------", "")
 
 	var ms = server.NewMemStorage()
 	m := storage.GetMonitor(handlers.Restore)
 	server.PrepareStorageValues(ms, m)
 
-	ticker := time.NewTicker(time.Second)
-	go storage.SaveMonitorPerSeconds(server.MaxSaverWorkTime, ticker, handlers.StoreInterval, handlers.FileStoragePath)
+	ticker := time.NewTicker(time.Duration(handlers.StoreInterval) * time.Second)
+	go func() {
+		if handlers.StoreInterval == 0 {
+			return
+		}
+		err := storage.SaveMonitorPerSeconds(server.MaxSaverWorkTime, ticker, handlers.FileStoragePath)
+		if err != nil {
+			logger.WriteInfoLog("error in SaveMonitorPerSeconds", err.Error())
+		}
+	}()
 
 	handlers.ParseFlags()
 	if err := http.ListenAndServe(handlers.MainURL, server.Router(ms)); err != nil {

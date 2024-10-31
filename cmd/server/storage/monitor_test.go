@@ -45,7 +45,7 @@ func TestSaveMonitorPerSeconds(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := SaveMonitorPerSeconds(tt.args.workTime, tt.args.ticker, 1, filename)
+			err := SaveMonitorPerSeconds(tt.args.workTime, tt.args.ticker, filename)
 			assert.NoError(t, err)
 		})
 	}

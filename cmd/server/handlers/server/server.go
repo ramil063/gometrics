@@ -11,8 +11,6 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
-
 	agentStorage "github.com/ramil063/gometrics/cmd/agent/storage"
 	"github.com/ramil063/gometrics/cmd/server/handlers/middlewares"
 	"github.com/ramil063/gometrics/cmd/server/storage"
@@ -54,7 +52,6 @@ func Router(ms Storager) chi.Router {
 	r.Use(logger.RequestLogger)
 	r.Use(middlewares.GZIPMiddleware)
 	r.Use(middlewares.CheckMethodMw)
-	r.Use(middlewares.SaveMonitorToFile)
 
 	homeHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
 		home(rw, r, ms)
@@ -191,11 +188,11 @@ func home(rw http.ResponseWriter, r *http.Request, ms Storager) {
 func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 
 	// десериализуем запрос в структуру модели
-	logger.Log.Debug("decoding request")
+	logger.WriteDebugLog("", "decoding request")
 	var metrics models.Metrics
 	dec := json.NewDecoder(r.Body)
 	if err := dec.Decode(&metrics); err != nil {
-		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		logger.WriteDebugLog("cannot decode request JSON body", err.Error())
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -205,38 +202,52 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	rw.Header().Set("Content-Type", "application/json")
 
 	logMsg, _ := json.Marshal(metrics)
-	logger.Log.Info("", zap.String("request body in update/", string(logMsg)))
+	logger.WriteInfoLog("request body in update/", string(logMsg))
 
 	switch metrics.MType {
 	case "gauge":
-		ms.SetGauge(metrics.ID, models.Gauge(*metrics.Value))
+		if handlers.Restore {
+			err := storage.SaveMetric(metrics.ID, "gauge", models.Gauge(*metrics.Value), 0, handlers.FileStoragePath)
+			if err != nil {
+				logger.WriteInfoLog("error save metric in file", "gauge ID:"+metrics.ID)
+			}
+		} else {
+			ms.SetGauge(metrics.ID, models.Gauge(*metrics.Value))
+		}
 	case "counter":
-		ms.AddCounter(metrics.ID, models.Counter(*metrics.Delta))
-		newCounter, _ := ms.GetCounter(metrics.ID)
-		metrics.Delta = &newCounter
+		if handlers.Restore {
+			err := storage.SaveMetric(metrics.ID, "counter", 0, models.Counter(*metrics.Delta), handlers.FileStoragePath)
+			if err != nil {
+				logger.WriteInfoLog("error save metric in file", "counter ID:"+metrics.ID)
+			}
+		} else {
+			ms.AddCounter(metrics.ID, models.Counter(*metrics.Delta))
+			newCounter, _ := ms.GetCounter(metrics.ID)
+			metrics.Delta = &newCounter
+		}
 	}
 
 	enc := json.NewEncoder(rw)
 	if err := enc.Encode(metrics); err != nil {
-		logger.Log.Error("error encoding response", zap.Error(err))
+		logger.WriteErrorLog("error encoding response", err.Error())
 		return
 	}
 
-	logger.Log.Debug("sending HTTP 200 response")
+	logger.WriteDebugLog("", "sending HTTP 200 response")
 }
 
 // getValueMetricsJSON метод обновления данных для метрик через json
 func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	// десериализуем запрос в структуру модели
-	logger.Log.Debug("decoding request")
+	logger.WriteDebugLog("message", "decoding request")
 	var metrics models.Metrics
 	dec := json.NewDecoder(r.Body)
 	if err := dec.Decode(&metrics); err != nil {
-		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		logger.WriteDebugLog("cannot decode request JSON body", err.Error())
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	logger.Log.Info("request body in value/", zap.String("metrics{ID, MType}", metrics.ID+","+metrics.MType))
+	logger.WriteInfoLog("request body in value/", "metrics{ID, MType}"+metrics.ID+","+metrics.MType)
 
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
@@ -246,7 +257,7 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	case "gauge":
 		value, ok := ms.GetGauge(metrics.ID)
 		if !ok {
-			logger.Log.Info("Error value of gauge is not Ok ID:" + metrics.ID)
+			logger.WriteInfoLog("Error value of gauge is not Ok", "ID:"+metrics.ID)
 			ms.SetGauge(metrics.ID, 0)
 			value = 0
 		}
@@ -255,20 +266,22 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 		ms.AddCounter(metrics.ID, models.Counter(0))
 		delta, ok := ms.GetCounter(metrics.ID)
 		if !ok {
-			logger.Log.Info("Error value of counter is not Ok ID:" + metrics.ID)
+			logger.WriteInfoLog("Error value of counter is not Ok", "ID:"+metrics.ID)
 		}
 		metrics.Delta = &delta
 	}
 
-	m := storage.GetMonitor(handlers.Restore)
-	PrepareStorageValues(ms, m)
+	if handlers.StoreInterval == 0 || handlers.Restore == false {
+		m := storage.GetMonitor(handlers.Restore)
+		PrepareStorageValues(ms, m)
+	}
 
 	enc := json.NewEncoder(rw)
 	if err := enc.Encode(metrics); err != nil {
-		logger.Log.Error("error encoding response", zap.Error(err))
+		logger.WriteErrorLog("error encoding response", err.Error())
 		return
 	}
-	logger.Log.Debug("sending HTTP 200 response")
+	logger.WriteDebugLog("", "sending HTTP 200 response")
 }
 
 func PrepareStorageValues(ms Storager, m agentStorage.Monitor) {

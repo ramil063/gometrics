@@ -3,7 +3,7 @@ package handlers
 import (
 	"flag"
 	"github.com/caarlos0/env/v6"
-	"go.uber.org/zap"
+	"strconv"
 
 	"github.com/ramil063/gometrics/internal/logger"
 )
@@ -43,13 +43,13 @@ func ParseFlags() {
 		FileStoragePath = ev.FileStoragePath
 	}
 
-	if ev.Restore {
+	if !ev.Restore {
 		Restore = ev.Restore
 	}
 
-	logger.Log.Info("set g.var", zap.String("Address", MainURL))
-	logger.Log.Info("set g.var", zap.Int("StoreInterval", StoreInterval))
-	logger.Log.Info("set g.var", zap.String("FileStoragePath", FileStoragePath))
-	logger.Log.Info("set g.var", zap.Bool("Restore", Restore))
+	logger.WriteInfoLog("set g.var", "Address:"+MainURL)
+	logger.WriteInfoLog("set g.var", "StoreInterval:"+strconv.Itoa(StoreInterval))
+	logger.WriteInfoLog("set g.var", "FileStoragePath:"+FileStoragePath)
+	logger.WriteInfoLog("set g.var", "Restore:"+strconv.FormatBool(Restore))
 
 }

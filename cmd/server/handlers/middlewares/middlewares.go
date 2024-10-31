@@ -1,12 +1,9 @@
 package middlewares
 
 import (
-	"github.com/ramil063/gometrics/cmd/server/storage"
 	"net/http"
 	"strconv"
 	"strings"
-
-	"go.uber.org/zap"
 
 	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"github.com/ramil063/gometrics/internal/logger"
@@ -18,7 +15,7 @@ func CheckMethodMw(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// разрешаем только POST, GET запросы
 		if r.Method != http.MethodPost && r.Method != http.MethodGet {
-			logger.Log.Debug("Incorrect method")
+			logger.WriteDebugLog("Incorrect method", "")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			w.Write([]byte("Incorrect method"))
 			return
@@ -33,7 +30,7 @@ func CheckPostMethodMw(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// разрешаем только POST запросы
 		if r.Method != http.MethodPost {
-			logger.Log.Debug("got request with bad method", zap.String("method", r.Method))
+			logger.WriteDebugLog("got request with bad method", "method:"+r.Method)
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
@@ -46,7 +43,7 @@ func CheckUpdateMetricsNameMw(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("metric") == "" {
-			logger.Log.Debug("Error metric name is empty")
+			logger.WriteDebugLog("Error metric name is empty", "")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -59,7 +56,7 @@ func CheckMetricsTypeMw(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("type") != "gauge" && r.PathValue("type") != "counter" {
-			logger.Log.Debug("Error in metric type (allowed 'gauge' or 'counter') got " + r.PathValue("type"))
+			logger.WriteDebugLog("Error in metric type (allowed 'gauge' or 'counter')", "got:"+r.PathValue("type"))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -72,7 +69,7 @@ func CheckUpdateMetricsValueMw(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("value") == "" {
-			logger.Log.Debug("Error in metric value")
+			logger.WriteDebugLog("Error in metric value", "")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -105,12 +102,12 @@ func CheckUpdateMetricsValueMw(next http.Handler) http.Handler {
 		}
 
 		if !issetMetricData {
-			logger.Log.Debug("Error in metric data(update)")
+			logger.WriteDebugLog("Error in metric data(update)", "")
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		if !issetCorrectValue {
-			logger.Log.Debug("Error in metric value(update)")
+			logger.WriteDebugLog("Error in metric value(update)", "")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -127,13 +124,13 @@ func CheckValueMetricsMw(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("type") != "gauge" && r.PathValue("type") != "counter" {
-			logger.Log.Debug("Error in metric type")
+			logger.WriteDebugLog("Error in metric type", "")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		if r.PathValue("metric") == "" {
-			logger.Log.Debug("Error in metric name")
+			logger.WriteDebugLog("Error in metric name", "")
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -186,19 +183,5 @@ func GZIPMiddleware(next http.Handler) http.Handler {
 
 		// передаём управление хендлеру
 		next.ServeHTTP(ow, r)
-	})
-}
-
-func SaveMonitorToFile(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if handlers.StoreInterval == 0 {
-			logger.Log.Info("Save metrics with store interval 0")
-
-			err := storage.SaveMonitor(handlers.FileStoragePath)
-			if err != nil {
-				logger.Log.Error("Error saving monitor to file", zap.Error(err))
-			}
-		}
-		next.ServeHTTP(w, r)
 	})
 }

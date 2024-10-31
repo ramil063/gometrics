@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"go.uber.org/zap"
 	"log"
 	"net/http"
 	"reflect"
@@ -120,7 +119,7 @@ func (r request) SendMetrics(c Clienter, maxCount int) error {
 
 				err := c.SendPostRequest(url)
 				if err != nil {
-					logger.Log.Error("Send request error: " + err.Error())
+					logger.WriteErrorLog("Send request error", err.Error())
 					log.Fatal("Error", err)
 					return err
 				}
@@ -173,12 +172,12 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int) error {
 				url := "http://" + MainURL + "/update"
 				body, err := json.Marshal(metrics)
 				if err != nil {
-					logger.Log.Error("Error marshal metrics", zap.Error(err))
+					logger.WriteErrorLog("Error marshal metrics", err.Error())
 				}
 
 				err = c.SendPostRequestWithBody(url, body)
 				if err != nil {
-					logger.Log.Error("Error in request", zap.Error(err))
+					logger.WriteErrorLog("Error in request", err.Error())
 				}
 			}
 		}

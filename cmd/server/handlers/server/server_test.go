@@ -17,6 +17,7 @@ import (
 )
 
 func Test_update(t *testing.T) {
+	handlers.Restore = false
 	tests := []struct {
 		name       string
 		statusCode int
@@ -62,6 +63,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.
 }
 
 func TestRouter(t *testing.T) {
+	handlers.Restore = false
 	ms := NewMemStorage()
 	ts := httptest.NewServer(Router(ms))
 	defer ts.Close()
@@ -84,6 +86,7 @@ func TestRouter(t *testing.T) {
 }
 
 func Test_getValue(t *testing.T) {
+	handlers.Restore = false
 	ms := NewMemStorage()
 	ts := httptest.NewServer(Router(ms))
 	defer ts.Close()
@@ -130,6 +133,7 @@ func Test_getValue(t *testing.T) {
 }
 
 func Test_home(t *testing.T) {
+	handlers.Restore = false
 	ms := NewMemStorage()
 	ts := httptest.NewServer(Router(ms))
 	defer ts.Close()
@@ -173,6 +177,7 @@ func TestNewMemStorage(t *testing.T) {
 }
 
 func Test_updateMetricsJSON(t *testing.T) {
+	handlers.Restore = false
 	updateMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
 		updateMetricsJSON(rw, req, NewMemStorage())
 	}
