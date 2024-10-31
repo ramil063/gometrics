@@ -3,6 +3,9 @@ package handlers
 import (
 	"flag"
 	"github.com/caarlos0/env/v6"
+	"go.uber.org/zap"
+
+	"github.com/ramil063/gometrics/internal/logger"
 )
 
 var MainURL = "localhost:8080"
@@ -43,4 +46,10 @@ func ParseFlags() {
 	if ev.Restore {
 		Restore = ev.Restore
 	}
+
+	logger.Log.Info("set g.var", zap.String("Address", MainURL))
+	logger.Log.Info("set g.var", zap.Int("StoreInterval", StoreInterval))
+	logger.Log.Info("set g.var", zap.String("FileStoragePath", FileStoragePath))
+	logger.Log.Info("set g.var", zap.Bool("Restore", Restore))
+
 }

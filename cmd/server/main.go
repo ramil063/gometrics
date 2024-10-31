@@ -14,6 +14,9 @@ func main() {
 	if err := logger.Initialize(); err != nil {
 		panic(err)
 	}
+
+	logger.Log.Info("--------------START SERVER-------------")
+
 	var ms = server.NewMemStorage()
 	m := storage.GetMonitor(handlers.Restore)
 	server.PrepareStorageValues(ms, m)
