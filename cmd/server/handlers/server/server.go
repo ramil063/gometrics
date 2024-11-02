@@ -2,18 +2,15 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
-	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"io"
 	"log"
 	"net/http"
-	"reflect"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+
 	agentStorage "github.com/ramil063/gometrics/cmd/agent/storage"
 	"github.com/ramil063/gometrics/cmd/server/handlers/middlewares"
-	"github.com/ramil063/gometrics/cmd/server/storage"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
@@ -37,15 +34,8 @@ type Storager interface {
 	Counterer
 }
 
-func NewMemStorage() Storager {
-	return &storage.MemStorage{
-		Gauges:   make(map[string]models.Gauge),
-		Counters: make(map[string]models.Counter),
-	}
-}
-
 // Router маршрутизация
-func Router(ms Storager) chi.Router {
+func Router(s Storager) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(logger.ResponseLogger)
@@ -54,7 +44,7 @@ func Router(ms Storager) chi.Router {
 	r.Use(middlewares.CheckMethodMw)
 
 	homeHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
-		home(rw, r, ms)
+		home(rw, r, s)
 	}
 	r.Get("/", homeHandlerFunction)
 
@@ -63,14 +53,14 @@ func Router(ms Storager) chi.Router {
 			r.Use(middlewares.CheckMetricsTypeMw)
 			r.Use(middlewares.CheckUpdateMetricsNameMw)
 			updateHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-				update(rw, req, ms)
+				update(rw, req, s)
 			}
 			r.With(middlewares.CheckUpdateMetricsValueMw).Post("/", updateHandlerFunction)
 			r.With(middlewares.CheckUpdateMetricsValueMw).Post("/{value}", updateHandlerFunction)
 		})
 
 		updateMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-			updateMetricsJSON(rw, req, ms)
+			updateMetricsJSON(rw, req, s)
 		}
 		r.With(middlewares.CheckPostMethodMw).Post("/", updateMetricsJSONHandlerFunction)
 	})
@@ -79,13 +69,13 @@ func Router(ms Storager) chi.Router {
 			r.Use(middlewares.CheckMetricsTypeMw)
 			r.Use(middlewares.CheckValueMetricsMw)
 			getValueHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-				getValue(rw, req, ms)
+				getValue(rw, req, s)
 			}
 			r.Get("/", getValueHandlerFunction)
 		})
 
 		getValueMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-			getValueMetricsJSON(rw, req, ms)
+			getValueMetricsJSON(rw, req, s)
 		}
 		r.With(middlewares.CheckPostMethodMw).Post("/", getValueMetricsJSONHandlerFunction)
 	})
@@ -185,7 +175,7 @@ func home(rw http.ResponseWriter, r *http.Request, ms Storager) {
 }
 
 // updateMetricsJSON метод обновления данных для метрик через json
-func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
+func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 
 	// десериализуем запрос в структуру модели
 	logger.WriteDebugLog("", "decoding request")
@@ -206,25 +196,11 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 
 	switch metrics.MType {
 	case "gauge":
-		if handlers.Restore {
-			err := storage.SaveMetric(metrics.ID, "gauge", models.Gauge(*metrics.Value), 0, handlers.FileStoragePath)
-			if err != nil {
-				logger.WriteInfoLog("error save metric in file", "gauge ID:"+metrics.ID)
-			}
-		} else {
-			ms.SetGauge(metrics.ID, models.Gauge(*metrics.Value))
-		}
+		s.SetGauge(metrics.ID, models.Gauge(*metrics.Value))
 	case "counter":
-		if handlers.Restore {
-			err := storage.SaveMetric(metrics.ID, "counter", 0, models.Counter(*metrics.Delta), handlers.FileStoragePath)
-			if err != nil {
-				logger.WriteInfoLog("error save metric in file", "counter ID:"+metrics.ID)
-			}
-		} else {
-			ms.AddCounter(metrics.ID, models.Counter(*metrics.Delta))
-			newCounter, _ := ms.GetCounter(metrics.ID)
-			metrics.Delta = &newCounter
-		}
+		s.AddCounter(metrics.ID, models.Counter(*metrics.Delta))
+		newCounter, _ := s.GetCounter(metrics.ID)
+		metrics.Delta = &newCounter
 	}
 
 	enc := json.NewEncoder(rw)
@@ -237,7 +213,7 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 }
 
 // getValueMetricsJSON метод обновления данных для метрик через json
-func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
+func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 	// десериализуем запрос в структуру модели
 	logger.WriteDebugLog("message", "decoding request")
 	var metrics models.Metrics
@@ -255,26 +231,24 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 
 	switch metrics.MType {
 	case "gauge":
-		value, ok := ms.GetGauge(metrics.ID)
+		value, ok := s.GetGauge(metrics.ID)
 		if !ok {
 			logger.WriteInfoLog("Error value of gauge is not Ok", "ID:"+metrics.ID)
-			ms.SetGauge(metrics.ID, 0)
+			s.SetGauge(metrics.ID, 0)
 			value = 0
 		}
 		metrics.Value = &value
 	case "counter":
-		ms.AddCounter(metrics.ID, models.Counter(0))
-		delta, ok := ms.GetCounter(metrics.ID)
+		s.AddCounter(metrics.ID, models.Counter(0))
+		delta, ok := s.GetCounter(metrics.ID)
 		if !ok {
 			logger.WriteInfoLog("Error value of counter is not Ok", "ID:"+metrics.ID)
 		}
 		metrics.Delta = &delta
 	}
 
-	if handlers.StoreInterval == 0 || handlers.Restore == false {
-		m := storage.GetMonitor(handlers.Restore)
-		PrepareStorageValues(ms, m)
-	}
+	m := agentStorage.NewMonitor()
+	PrepareMetricsValues(s, m)
 
 	enc := json.NewEncoder(rw)
 	if err := enc.Encode(metrics); err != nil {
@@ -282,20 +256,4 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, ms Storager) {
 		return
 	}
 	logger.WriteDebugLog("", "sending HTTP 200 response")
-}
-
-func PrepareStorageValues(ms Storager, m agentStorage.Monitor) {
-	v := reflect.ValueOf(m)
-	typeOfS := v.Type()
-
-	for i := 0; i < v.NumField(); i++ {
-		metricID := typeOfS.Field(i).Name
-		metricValue, _ := strconv.ParseFloat(fmt.Sprintf("%v", v.Field(i).Interface()), 64)
-
-		if typeOfS.Field(i).Name == "PollCount" {
-			ms.AddCounter(metricID, models.Counter(1))
-		} else {
-			ms.SetGauge(metricID, models.Gauge(metricValue))
-		}
-	}
 }

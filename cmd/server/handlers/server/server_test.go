@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ramil063/gometrics/cmd/agent/storage"
-	"github.com/ramil063/gometrics/cmd/server/filer"
 	"github.com/ramil063/gometrics/cmd/server/handlers"
 )
 
@@ -166,7 +164,7 @@ func TestNewMemStorage(t *testing.T) {
 		name string
 		want string
 	}{
-		{"test 1", "*storage.MemStorage"},
+		{"test 1", "*memory.MemStorage"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -233,18 +231,11 @@ func Test_updateMetricsJSON(t *testing.T) {
 func Test_getValueMetricsJSON(t *testing.T) {
 	filePath := "../../../../internal/storage/files/test.json"
 
-	var m = storage.NewMonitor()
-	w, _ := filer.NewWriter(filePath)
-	err := w.WriteMonitor(&m)
-	if err != nil {
-		return
-	}
-
 	handlers.FileStoragePath = filePath
 	getValueMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-		ms := NewMemStorage()
-		ms.SetGauge("met1", 1.1)
-		getValueMetricsJSON(rw, req, ms)
+		s := GetStorage(false)
+		s.SetGauge("met1", 1.1)
+		getValueMetricsJSON(rw, req, s)
 	}
 	handler := http.HandlerFunc(getValueMetricsJSONHandlerFunction)
 	srv := httptest.NewServer(handler)
@@ -291,30 +282,6 @@ func Test_getValueMetricsJSON(t *testing.T) {
 			if tc.expectedBody != "" {
 				assert.JSONEq(t, tc.expectedBody, string(resp.Body()))
 			}
-		})
-	}
-}
-
-func TestPrepareStorageValues(t *testing.T) {
-	type args struct {
-		ms Storager
-		m  storage.Monitor
-	}
-	a := args{
-		ms: NewMemStorage(),
-		m:  storage.NewMonitor(),
-	}
-	tests := []struct {
-		name string
-		args args
-	}{
-		{"test 1", a},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			PrepareStorageValues(tt.args.ms, tt.args.m)
-			pc, _ := tt.args.ms.GetCounter("PollCount")
-			assert.Equal(t, pc, int64(tt.args.m.PollCount+1))
 		})
 	}
 }

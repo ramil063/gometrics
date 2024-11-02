@@ -1,4 +1,4 @@
-package storage
+package memory
 
 import (
 	"github.com/ramil063/gometrics/internal/models"

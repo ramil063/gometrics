@@ -2,8 +2,9 @@ package handlers
 
 import (
 	"flag"
-	"github.com/caarlos0/env/v6"
 	"strconv"
+
+	"github.com/caarlos0/env/v6"
 
 	"github.com/ramil063/gometrics/internal/logger"
 )
@@ -51,5 +52,4 @@ func ParseFlags() {
 	logger.WriteInfoLog("set g.var", "StoreInterval:"+strconv.Itoa(StoreInterval))
 	logger.WriteInfoLog("set g.var", "FileStoragePath:"+FileStoragePath)
 	logger.WriteInfoLog("set g.var", "Restore:"+strconv.FormatBool(Restore))
-
 }

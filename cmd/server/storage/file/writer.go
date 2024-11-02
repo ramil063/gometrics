@@ -1,11 +1,10 @@
-package filer
+package file
 
 import (
 	"bufio"
 	"encoding/json"
+	"github.com/ramil063/gometrics/internal/logger"
 	"os"
-
-	"github.com/ramil063/gometrics/cmd/agent/storage"
 )
 
 type Writer struct {
@@ -27,8 +26,24 @@ func NewWriter(filename string) (*Writer, error) {
 	}, nil
 }
 
-func (w *Writer) WriteMonitor(monitor *storage.Monitor) error {
-	data, err := json.Marshal(&monitor)
+func WriteMetricsToFile(metrics *FStorage, filepath string) error {
+	Writer, err := NewWriter(filepath)
+	if err != nil {
+		logger.WriteErrorLog("error create metrics writer", err.Error())
+		return err
+	}
+	defer Writer.Close()
+
+	err = Writer.WriteMetrics(metrics)
+	if err != nil {
+		logger.WriteErrorLog("error write metrics", err.Error())
+		return err
+	}
+	return nil
+}
+
+func (w *Writer) WriteMetrics(metrics *FStorage) error {
+	data, err := json.Marshal(&metrics)
 	if err != nil {
 		return err
 	}

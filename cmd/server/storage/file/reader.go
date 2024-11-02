@@ -1,12 +1,11 @@
-package filer
+package file
 
 import (
 	"bufio"
 	"encoding/json"
+	"github.com/ramil063/gometrics/internal/logger"
 	"os"
 	"path/filepath"
-
-	"github.com/ramil063/gometrics/cmd/agent/storage"
 )
 
 type Reader struct {
@@ -35,7 +34,25 @@ func NewReader(filename string) (*Reader, error) {
 	}, nil
 }
 
-func (r *Reader) ReadMonitor() (*storage.Monitor, error) {
+// ReadMetricsFromFile чтение метрик из файла
+func ReadMetricsFromFile(filepath string) (*FStorage, error) {
+	Reader, err := NewReader(filepath)
+	if err != nil {
+		logger.WriteErrorLog("error create reader in SetGauge", err.Error())
+		return nil, err
+	}
+	defer Reader.Close()
+
+	metrics, err := Reader.ReadMetrics()
+	if err != nil {
+		logger.WriteErrorLog("error read metrics in SetGauge", err.Error())
+		return nil, err
+	}
+	return metrics, nil
+}
+
+// ReadMetrics чтение метрик
+func (r *Reader) ReadMetrics() (*FStorage, error) {
 	// читаем данные до символа переноса строки
 	data, err := r.reader.ReadBytes('\n')
 	if err != nil {
@@ -43,13 +60,13 @@ func (r *Reader) ReadMonitor() (*storage.Monitor, error) {
 	}
 
 	// преобразуем данные из JSON-представления в структуру
-	monitor := storage.Monitor{}
-	err = json.Unmarshal(data, &monitor)
+	metrics := FStorage{}
+	err = json.Unmarshal(data, &metrics)
 	if err != nil {
 		return nil, err
 	}
 
-	return &monitor, nil
+	return &metrics, nil
 }
 
 func (r *Reader) Close() error {

@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ramil063/gometrics/cmd/server/storage"
+	"github.com/ramil063/gometrics/cmd/server/storage/memory"
 	"github.com/ramil063/gometrics/internal/models"
 )
 
@@ -331,7 +331,7 @@ func TestGZIPMiddleware(t *testing.T) {
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		ms := &storage.MemStorage{
+		ms := &memory.MemStorage{
 			Gauges:   make(map[string]models.Gauge),
 			Counters: make(map[string]models.Counter),
 		}
