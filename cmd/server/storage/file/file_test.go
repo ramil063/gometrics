@@ -15,6 +15,8 @@ func TestFStorage_AddCounter(t *testing.T) {
 	}
 
 	handlers.FileStoragePath = "../../../../internal/storage/files/test.json"
+	_, err := NewReader(handlers.FileStoragePath)
+
 	Writer, err := NewWriter(handlers.FileStoragePath)
 	if err != nil {
 		logger.WriteErrorLog("error create metrics writer", err.Error())
