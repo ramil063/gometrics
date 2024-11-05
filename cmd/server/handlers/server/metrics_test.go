@@ -1,10 +1,12 @@
 package server
 
 import (
-	"github.com/ramil063/gometrics/cmd/agent/storage"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/ramil063/gometrics/cmd/agent/storage"
 )
 
 func TestPrepareMetricsValues(t *testing.T) {

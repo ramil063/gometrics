@@ -3,9 +3,10 @@ package file
 import (
 	"bufio"
 	"encoding/json"
-	"github.com/ramil063/gometrics/internal/logger"
 	"os"
 	"path/filepath"
+
+	"github.com/ramil063/gometrics/internal/logger"
 )
 
 type Reader struct {

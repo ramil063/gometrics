@@ -2,11 +2,12 @@ package server
 
 import (
 	"fmt"
-	"github.com/ramil063/gometrics/cmd/agent/storage"
-	"github.com/ramil063/gometrics/internal/models"
 	"reflect"
 	"strconv"
 	"time"
+
+	"github.com/ramil063/gometrics/cmd/agent/storage"
+	"github.com/ramil063/gometrics/internal/models"
 )
 
 var workSecond = 0

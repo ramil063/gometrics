@@ -1,11 +1,13 @@
 package file
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
 	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
-	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestFStorage_AddCounter(t *testing.T) {
