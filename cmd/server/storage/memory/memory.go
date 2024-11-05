@@ -1,7 +1,7 @@
-package storage
+package memory
 
 import (
-	"github.com/ramil063/gometrics/cmd/server/models"
+	"github.com/ramil063/gometrics/internal/models"
 )
 
 type MemStorage struct {

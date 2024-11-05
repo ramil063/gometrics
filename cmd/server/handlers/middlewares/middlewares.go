@@ -1,20 +1,37 @@
 package middlewares
 
 import (
-	"log"
 	"net/http"
 	"strconv"
+	"strings"
+
+	"github.com/ramil063/gometrics/cmd/server/handlers"
+	"github.com/ramil063/gometrics/internal/logger"
 )
 
 // CheckMethodMw middleware для проверки метода запроса
 func CheckMethodMw(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// разрешаем только POST, GET запросы с определенным заголовком
+		// разрешаем только POST, GET запросы
 		if r.Method != http.MethodPost && r.Method != http.MethodGet {
-			log.Println("Error in method")
+			logger.WriteDebugLog("Incorrect method", "")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			w.Write([]byte("Incorrect method"))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// CheckPostMethodMw middleware для проверки метода запроса
+func CheckPostMethodMw(next http.Handler) http.Handler {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// разрешаем только POST запросы
+		if r.Method != http.MethodPost {
+			logger.WriteDebugLog("got request with bad method", "method:"+r.Method)
+			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -26,7 +43,7 @@ func CheckUpdateMetricsNameMw(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("metric") == "" {
-			log.Println("Error metric name is empty")
+			logger.WriteDebugLog("Error metric name is empty", "")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -39,7 +56,7 @@ func CheckMetricsTypeMw(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("type") != "gauge" && r.PathValue("type") != "counter" {
-			log.Println("Error in metric type (allowed 'gauge' or 'counter') got " + r.PathValue("type"))
+			logger.WriteDebugLog("Error in metric type (allowed 'gauge' or 'counter')", "got:"+r.PathValue("type"))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -52,7 +69,7 @@ func CheckUpdateMetricsValueMw(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("value") == "" {
-			log.Println("Error in metric value")
+			logger.WriteDebugLog("Error in metric value", "")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -85,12 +102,12 @@ func CheckUpdateMetricsValueMw(next http.Handler) http.Handler {
 		}
 
 		if !issetMetricData {
-			log.Println("Error in metric data(update)")
+			logger.WriteDebugLog("Error in metric data(update)", "")
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		if !issetCorrectValue {
-			log.Println("Error in metric value(update)")
+			logger.WriteDebugLog("Error in metric value(update)", "")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -107,17 +124,64 @@ func CheckValueMetricsMw(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("type") != "gauge" && r.PathValue("type") != "counter" {
-			log.Println("Error in metric type")
+			logger.WriteDebugLog("Error in metric type", "")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		if r.PathValue("metric") == "" {
-			log.Println("Error in metric name")
+			logger.WriteDebugLog("Error in metric name", "")
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
 		next.ServeHTTP(w, r)
+	})
+}
+
+// GZIPMiddleware нужен для сжатия входящих и выходных данных
+func GZIPMiddleware(next http.Handler) http.Handler {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
+		// который будем передавать следующей функции
+		ow := w
+
+		// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
+		acceptEncoding := r.Header.Get("Accept-Encoding")
+		supportsGzip := strings.Contains(acceptEncoding, "gzip")
+		contentType := r.Header.Get("Content-Type")
+		accept := r.Header.Get("Accept")
+		applicationJSON := strings.Contains(contentType, "application/json")
+		textHTML := strings.Contains(contentType, "text/html")
+		acceptTextHTML := strings.Contains(accept, "text/html")
+
+		if supportsGzip && (applicationJSON || textHTML || acceptTextHTML) {
+			// оборачиваем оригинальный http.ResponseWriter новым с поддержкой сжатия
+			cw := handlers.NewCompressWriter(w)
+			// меняем оригинальный http.ResponseWriter на новый
+			ow = cw
+			// не забываем отправить клиенту все сжатые данные после завершения middleware
+			defer cw.Close()
+		}
+
+		// проверяем, что клиент отправил серверу сжатые данные в формате gzip
+		contentEncoding := r.Header.Get("Content-Encoding")
+		sendsGzip := strings.Contains(contentEncoding, "gzip")
+
+		if sendsGzip && (applicationJSON || textHTML || acceptTextHTML) {
+			// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
+			cr, err := handlers.NewCompressReader(r.Body)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			// меняем тело запроса на новое
+			r.Body = cr
+			defer cr.Close()
+		}
+
+		// передаём управление хендлеру
+		next.ServeHTTP(ow, r)
 	})
 }
