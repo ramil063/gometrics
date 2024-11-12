@@ -11,6 +11,7 @@ import (
 
 	agentStorage "github.com/ramil063/gometrics/cmd/agent/storage"
 	"github.com/ramil063/gometrics/cmd/server/handlers/middlewares"
+	"github.com/ramil063/gometrics/cmd/server/storage/db"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
@@ -47,6 +48,11 @@ func Router(s Storager) chi.Router {
 		home(rw, r, s)
 	}
 	r.Get("/", homeHandlerFunction)
+
+	pingHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
+		ping(rw, r, s)
+	}
+	r.Get("/ping", pingHandlerFunction)
 
 	r.Route("/update", func(r chi.Router) {
 		r.Route("/{type}/{metric}", func(r chi.Router) {
@@ -256,4 +262,14 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 		return
 	}
 	logger.WriteDebugLog("", "sending HTTP 200 response")
+}
+
+// Home метод получения данных из всех метрик
+func ping(rw http.ResponseWriter, r *http.Request, ms Storager) {
+	if err := db.Database.CheckPing(); err != nil {
+		logger.WriteErrorLog("DB ping error", err.Error())
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	rw.WriteHeader(http.StatusOK)
 }
