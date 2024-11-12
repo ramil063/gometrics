@@ -18,5 +18,5 @@ func WriteDebugLog(message string, field string) {
 }
 
 func WriteErrorLog(message string, field string) {
-	Log.Debug(message, zap.String(logInfoLevel, field))
+	Log.Error(message, zap.String(logInfoLevel, field))
 }
