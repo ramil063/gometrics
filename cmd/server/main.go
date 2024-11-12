@@ -21,7 +21,7 @@ func main() {
 	logger.WriteInfoLog("--------------START SERVER-------------", "")
 
 	if err := db.Database.Init(handlers.DatabaseDSN); err != nil {
-		panic(err)
+		logger.WriteInfoLog("error init DB", err.Error())
 	}
 	defer db.Database.Ptr.Close()
 
