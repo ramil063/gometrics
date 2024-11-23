@@ -36,7 +36,7 @@ func CheckPing(dbr dml.DataBaser) error {
 func CreateTables(dbr dml.DataBaser) error {
 	var err error
 
-	createTablesSql := `
+	createTablesSQL := `
 	
 	CREATE TABLE IF NOT EXISTS public.gauge
 	(
@@ -58,6 +58,6 @@ func CreateTables(dbr dml.DataBaser) error {
 	comment on column public.counter.name is 'Название метрики';
 	comment on column public.counter.value is 'Значение метрики';`
 
-	_, err = dbr.ExecContext(context.Background(), createTablesSql)
+	_, err = dbr.ExecContext(context.Background(), createTablesSQL)
 	return err
 }
