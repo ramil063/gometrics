@@ -2,45 +2,62 @@ package db
 
 import (
 	"context"
-	"database/sql"
+	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"time"
 
 	"github.com/ramil063/gometrics/internal/logger"
+	"github.com/ramil063/gometrics/internal/models"
 )
 
-type DataBaser interface {
-	Init(ps string) error
-	CheckPing() error
+type Storage struct {
+	Gauges   map[string]models.Gauge
+	Counters map[string]models.Counter
 }
 
-type DB struct {
-	Ptr *sql.DB
-}
+func Init(dbr dml.DataBaser) error {
+	var err error
 
-var Database DB
-
-func (db *DB) Init(ps string) error {
-	database, err := sql.Open("pgx", ps)
-	if err != nil {
-		logger.WriteErrorLog("DB open error", err.Error())
-		return err
-	}
-	db.Ptr = database
-
-	if err = db.CheckPing(); err != nil {
-		logger.WriteErrorLog("DB ping error", err.Error())
+	if err = CheckPing(dbr); err != nil {
+		logger.WriteErrorLog("Database ping error", err.Error())
 		return err
 	}
 
-	Database.Ptr = database
-	return nil
+	err = CreateTables(dbr)
+	return err
 }
 
-func (db *DB) CheckPing() error {
+func CheckPing(dbr dml.DataBaser) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	if err := db.Ptr.PingContext(ctx); err != nil {
-		return err
-	}
-	return nil
+
+	return dbr.PingContext(ctx)
+}
+
+func CreateTables(dbr dml.DataBaser) error {
+	var err error
+
+	createTablesSql := `
+	
+	CREATE TABLE IF NOT EXISTS public.gauge
+	(
+	    id    serial constraint gauge_pk primary key,
+	    name  varchar          not null constraint gauge_pk_2 unique,
+	    value double precision not null
+	);
+	comment on table public.gauge is 'Gauge метрики';
+	comment on column public.gauge.name is 'Название метрики';
+	comment on column public.gauge.value is 'Значение метрики';
+	        
+	CREATE TABLE IF NOT EXISTS public.counter
+	(
+	    id    serial constraint counter_pk primary key,
+	    name  varchar not null constraint counter_pk_2 unique,
+	    value integer not null
+	);
+	comment on table public.counter is 'Counter метрики';
+	comment on column public.counter.name is 'Название метрики';
+	comment on column public.counter.value is 'Значение метрики';`
+
+	_, err = dbr.ExecContext(context.Background(), createTablesSql)
+	return err
 }

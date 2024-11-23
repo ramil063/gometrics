@@ -13,7 +13,7 @@ var MainURL = "localhost:8080"
 var StoreInterval = 300
 var FileStoragePath = "internal/storage/files/metrics.json"
 var Restore = true
-var DatabaseDSN = "host=localhost user=u password=pass dbname=db sslmode=disabl"
+var DatabaseDSN = ""
 
 type EnvVars struct {
 	Address         string `env:"ADDRESS"`
@@ -25,7 +25,7 @@ type EnvVars struct {
 
 func ParseFlags() {
 	flag.StringVar(&MainURL, "a", "localhost:8080", "address and port to run server")
-	flag.StringVar(&DatabaseDSN, "d", "host=localhost user=u password=pass dbname=db sslmode=disabl", "database DSN")
+	flag.StringVar(&DatabaseDSN, "d", "", "database DSN")
 	flag.IntVar(&StoreInterval, "i", 300, "interval of saving metrics to file")
 	flag.StringVar(&FileStoragePath, "f", "internal/storage/files/metrics.json", "file storage path")
 	flag.BoolVar(&Restore, "r", true, "file storage path")

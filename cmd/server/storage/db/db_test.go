@@ -4,9 +4,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/require"
-
-	db "github.com/ramil063/gometrics/cmd/server/storage/db/mocks"
+	"github.com/ramil063/gometrics/cmd/server/storage/db/dml/mocks"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCheckPing(t *testing.T) {
@@ -16,23 +15,39 @@ func TestCheckPing(t *testing.T) {
 	dataBaser := db.NewMockDataBaser(ctrl)
 
 	dataBaser.EXPECT().
-		CheckPing().
+		PingContext(gomock.Any()).
 		Return(nil)
-
-	err := dataBaser.CheckPing()
-	require.NoError(t, err)
+	err := CheckPing(dataBaser)
+	assert.NoError(t, err)
 }
 
-func TestInitDb(t *testing.T) {
+func TestCreateTables(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	dataBaser := db.NewMockDataBaser(ctrl)
 
 	dataBaser.EXPECT().
-		Init("database dsn").
-		Return(nil)
+		ExecContext(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, nil)
 
-	err := dataBaser.Init("database dsn")
-	require.NoError(t, err)
+	err := CreateTables(dataBaser)
+	assert.NoError(t, err)
+}
+
+func TestInit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dataBaser := db.NewMockDataBaser(ctrl)
+
+	dataBaser.EXPECT().
+		PingContext(gomock.Any()).
+		Return(nil)
+	dataBaser.EXPECT().
+		ExecContext(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, nil)
+
+	err := Init(dataBaser)
+	assert.NoError(t, err)
 }

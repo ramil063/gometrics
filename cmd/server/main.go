@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/ramil063/gometrics/cmd/server/storage/db"
+	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"net/http"
 	"time"
 
@@ -8,7 +10,6 @@ import (
 
 	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"github.com/ramil063/gometrics/cmd/server/handlers/server"
-	"github.com/ramil063/gometrics/cmd/server/storage/db"
 	"github.com/ramil063/gometrics/internal/logger"
 )
 
@@ -20,12 +21,17 @@ func main() {
 
 	logger.WriteInfoLog("--------------START SERVER-------------", "")
 
-	if err := db.Database.Init(handlers.DatabaseDSN); err != nil {
-		logger.WriteInfoLog("error init DB", err.Error())
-	}
-	defer db.Database.Ptr.Close()
+	var s = server.GetStorage(handlers.Restore, handlers.DatabaseDSN)
 
-	var s = server.GetStorage(handlers.Restore)
+	if handlers.DatabaseDSN != "" {
+		dml.DBRepository = *dml.NewRepository()
+		err := db.Init(&dml.DBRepository)
+		defer dml.DBRepository.Close()
+		if err != nil {
+			logger.WriteErrorLog("Error in init db", err.Error())
+		}
+	}
+
 	ticker := time.NewTicker(time.Duration(handlers.StoreInterval) * time.Second)
 	go func() {
 		if handlers.StoreInterval == 0 {

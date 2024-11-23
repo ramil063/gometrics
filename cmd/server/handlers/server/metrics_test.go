@@ -50,7 +50,7 @@ func TestSaveMetricsPerTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			SaveMetricsPerTime(tt.args.workTime, tt.args.ticker, GetStorage(false))
+			SaveMetricsPerTime(tt.args.workTime, tt.args.ticker, GetStorage(false, ""))
 		})
 	}
 }

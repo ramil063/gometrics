@@ -1,7 +1,11 @@
 package server
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
+	"github.com/ramil063/gometrics/cmd/server/storage/db"
+	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"io"
 	"log"
 	"net/http"
@@ -11,7 +15,6 @@ import (
 
 	agentStorage "github.com/ramil063/gometrics/cmd/agent/storage"
 	"github.com/ramil063/gometrics/cmd/server/handlers/middlewares"
-	"github.com/ramil063/gometrics/cmd/server/storage/db"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
@@ -33,6 +36,19 @@ type Counterer interface {
 type Storager interface {
 	Gauger
 	Counterer
+}
+
+type DBStorager interface {
+	Storager
+	CreateOrUpdateCounter(name string, value models.Counter) (sql.Result, error)
+	CreateOrUpdateGauge(name string, value models.Gauge) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	Open() (*sql.DB, error)
+	Close() error
+	PingContext(ctx context.Context) error
+	SetDatabase() error
 }
 
 // Router маршрутизация
@@ -266,8 +282,8 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 
 // Home метод получения данных из всех метрик
 func ping(rw http.ResponseWriter, r *http.Request, ms Storager) {
-	if err := db.Database.CheckPing(); err != nil {
-		logger.WriteErrorLog("DB ping error", err.Error())
+	if err := db.CheckPing(dml.NewRepository()); err != nil {
+		logger.WriteErrorLog("Database storage ping error", err.Error())
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
