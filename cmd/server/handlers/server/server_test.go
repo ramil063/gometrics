@@ -233,7 +233,7 @@ func Test_getValueMetricsJSON(t *testing.T) {
 
 	handlers.FileStoragePath = filePath
 	getValueMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-		s := GetStorage(false)
+		s := GetStorage(false, "")
 		s.SetGauge("met1", 1.1)
 		getValueMetricsJSON(rw, req, s)
 	}
