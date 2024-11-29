@@ -17,6 +17,7 @@ import (
 
 type JSONRequester interface {
 	SendMetricsJSON(c JSONClienter, maxCount int) error
+	SendMultipleMetricsJSON(c JSONClienter, maxCount int) error
 }
 
 type Requester interface {
@@ -179,6 +180,63 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int) error {
 				if err != nil {
 					logger.WriteErrorLog("Error in request", err.Error())
 				}
+			}
+		}
+	}
+	return nil
+}
+
+// SendMultipleMetricsJSON отправка нескольких метрик
+func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) error {
+	var interval = 1 * time.Second
+	count := 0
+	seconds := 0
+	var m storage.Monitor
+	url := "http://" + MainURL + "/updates"
+
+	for seconds < maxCount {
+		<-time.After(interval)
+		seconds++
+		if (seconds % PollInterval) == 0 {
+			log.Println("get metrics json")
+			m = storage.NewMonitor()
+			m.PollCount = models.Counter(count)
+			count++
+		}
+
+		if (seconds % ReportInterval) == 0 {
+			body := make([]byte, 100)
+			v := reflect.ValueOf(m)
+			typeOfS := v.Type()
+			log.Println("send metrics json")
+			allMetrics := make([]models.Metrics, 100)
+
+			for i := 0; i < v.NumField(); i++ {
+				metricID := typeOfS.Field(i).Name
+				metricValue, _ := strconv.ParseFloat(fmt.Sprintf("%v", v.Field(i).Interface()), 64)
+				delta := int64(m.PollCount)
+
+				metrics := models.Metrics{
+					ID:    metricID,
+					MType: "gauge",
+					Delta: nil,
+					Value: &metricValue,
+				}
+
+				if typeOfS.Field(i).Name == "PollCount" {
+					metrics.MType = "counter"
+					metrics.Delta = &delta
+					metrics.Value = nil
+				}
+				allMetrics = append(allMetrics, metrics)
+			}
+			body, err := json.Marshal(allMetrics)
+			if err != nil {
+				logger.WriteErrorLog("Error marshal metrics", err.Error())
+			}
+
+			if err := c.SendPostRequestWithBody(url, body); err != nil {
+				logger.WriteErrorLog("Error in request", err.Error())
 			}
 		}
 	}

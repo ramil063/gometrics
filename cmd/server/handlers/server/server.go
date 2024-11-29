@@ -1,11 +1,7 @@
 package server
 
 import (
-	"context"
-	"database/sql"
 	"encoding/json"
-	"github.com/ramil063/gometrics/cmd/server/storage/db"
-	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"io"
 	"log"
 	"net/http"
@@ -15,6 +11,8 @@ import (
 
 	agentStorage "github.com/ramil063/gometrics/cmd/agent/storage"
 	"github.com/ramil063/gometrics/cmd/server/handlers/middlewares"
+	"github.com/ramil063/gometrics/cmd/server/storage/db"
+	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
@@ -38,19 +36,6 @@ type Storager interface {
 	Counterer
 }
 
-type DBStorager interface {
-	Storager
-	CreateOrUpdateCounter(name string, value models.Counter) (sql.Result, error)
-	CreateOrUpdateGauge(name string, value models.Gauge) (sql.Result, error)
-	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
-	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
-	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
-	Open() (*sql.DB, error)
-	Close() error
-	PingContext(ctx context.Context) error
-	SetDatabase() error
-}
-
 // Router маршрутизация
 func Router(s Storager) chi.Router {
 	r := chi.NewRouter()
@@ -69,6 +54,11 @@ func Router(s Storager) chi.Router {
 		ping(rw, r, s)
 	}
 	r.Get("/ping", pingHandlerFunction)
+
+	updatesHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
+		updates(rw, r, s)
+	}
+	r.Post("/updates", updatesHandlerFunction)
 
 	r.Route("/update", func(r chi.Router) {
 		r.Route("/{type}/{metric}", func(r chi.Router) {
@@ -281,11 +271,47 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 }
 
 // Home метод получения данных из всех метрик
-func ping(rw http.ResponseWriter, r *http.Request, ms Storager) {
+func ping(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 	if err := db.CheckPing(dml.NewRepository()); err != nil {
 		logger.WriteErrorLog("Database storage ping error", err.Error())
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	rw.WriteHeader(http.StatusOK)
+}
+
+// Home метод получения данных из всех метрик
+func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
+	var metrics []models.Metrics
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&metrics); err != nil {
+		logger.WriteDebugLog("cannot decode request JSON body", err.Error())
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	rw.Header().Set("Content-Type", "application/json")
+	logMsg, _ := json.Marshal(metrics)
+	logger.WriteInfoLog("request body in updates/", string(logMsg))
+
+	for _, m := range metrics {
+		switch m.MType {
+		case "gauge":
+			dbs.SetGauge(m.ID, models.Gauge(*m.Value))
+		case "counter":
+			dbs.AddCounter(m.ID, models.Counter(*m.Delta))
+			newCounter, _ := dbs.GetCounter(m.ID)
+			m.Delta = &newCounter
+		}
+	}
+
+	enc := json.NewEncoder(rw)
+	if err := enc.Encode(metrics); err != nil {
+		logger.WriteErrorLog("error encoding response", err.Error())
+		return
+	}
+
+	logger.WriteDebugLog("", "sending HTTP 200 response")
 }
