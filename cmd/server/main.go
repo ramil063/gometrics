@@ -1,8 +1,6 @@
 package main
 
 import (
-	"github.com/ramil063/gometrics/cmd/server/storage/db"
-	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"net/http"
 	"time"
 
@@ -10,6 +8,8 @@ import (
 
 	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"github.com/ramil063/gometrics/cmd/server/handlers/server"
+	"github.com/ramil063/gometrics/cmd/server/storage/db"
+	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"github.com/ramil063/gometrics/internal/logger"
 )
 

@@ -205,7 +205,6 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) error {
 		}
 
 		if (seconds % ReportInterval) == 0 {
-			body := make([]byte, 100)
 			v := reflect.ValueOf(m)
 			typeOfS := v.Type()
 			log.Println("send metrics json")
