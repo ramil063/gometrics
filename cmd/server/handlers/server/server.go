@@ -296,19 +296,32 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 	logMsg, _ := json.Marshal(metrics)
 	logger.WriteInfoLog("request body in updates/", string(logMsg))
 
-	for _, m := range metrics {
+	result := make([]models.Metrics, len(metrics))
+
+	for i, m := range metrics {
+		result[i] = m
+
 		switch m.MType {
 		case "gauge":
+			if m.Value == nil {
+				d := float64(0)
+				m.Value = &d
+			}
 			dbs.SetGauge(m.ID, models.Gauge(*m.Value))
+			result[i].Value = m.Value
 		case "counter":
+			if m.Delta == nil {
+				d := int64(0)
+				m.Delta = &d
+			}
 			dbs.AddCounter(m.ID, models.Counter(*m.Delta))
 			newCounter, _ := dbs.GetCounter(m.ID)
-			m.Delta = &newCounter
+			result[i].Delta = &newCounter
 		}
 	}
 
 	enc := json.NewEncoder(rw)
-	if err := enc.Encode(metrics); err != nil {
+	if err := enc.Encode(result); err != nil {
 		logger.WriteErrorLog("error encoding response", err.Error())
 		return
 	}
