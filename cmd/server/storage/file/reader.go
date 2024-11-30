@@ -39,14 +39,14 @@ func NewReader(filename string) (*Reader, error) {
 func ReadMetricsFromFile(filepath string) (*FStorage, error) {
 	Reader, err := NewReader(filepath)
 	if err != nil {
-		logger.WriteErrorLog("error create reader in SetGauge", err.Error())
+		logger.WriteErrorLog("error create metrics reader", err.Error())
 		return nil, err
 	}
 	defer Reader.Close()
 
 	metrics, err := Reader.ReadMetrics()
 	if err != nil {
-		logger.WriteErrorLog("error read metrics in SetGauge", err.Error())
+		logger.WriteErrorLog("error read metrics from file", err.Error())
 		return nil, err
 	}
 	return metrics, nil
