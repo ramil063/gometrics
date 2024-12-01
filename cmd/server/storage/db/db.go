@@ -52,7 +52,7 @@ func CreateTables(dbr dml.DataBaser) error {
 	(
 	    id    serial constraint counter_pk primary key,
 	    name  varchar not null constraint counter_pk_2 unique,
-	    value integer not null
+	    value bigint not null
 	);
 	comment on table public.counter is 'Counter метрики';
 	comment on column public.counter.name is 'Название метрики';
