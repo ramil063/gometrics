@@ -55,10 +55,12 @@ func Router(s Storager) chi.Router {
 	}
 	r.Get("/ping", pingHandlerFunction)
 
-	updatesHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
-		updates(rw, r, s)
-	}
-	r.With(middlewares.CheckPostMethodMw).Post("/updates", updatesHandlerFunction)
+	r.Route("/updates", func(r chi.Router) {
+		updatesHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
+			updates(rw, r, s)
+		}
+		r.With(middlewares.CheckPostMethodMw).Post("/", updatesHandlerFunction)
+	})
 
 	r.Route("/update", func(r chi.Router) {
 		r.Route("/{type}/{metric}", func(r chi.Router) {
@@ -285,9 +287,7 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 	var metrics []models.Metrics
 	dec := json.NewDecoder(r.Body)
 	err := dec.Decode(&metrics)
-	if len(metrics) == 0 {
-		logger.WriteInfoLog("no metrics in request JSON body", err.Error())
-	}
+
 	if err != nil {
 		logger.WriteDebugLog("cannot decode request JSON body", err.Error())
 		rw.WriteHeader(http.StatusInternalServerError)
