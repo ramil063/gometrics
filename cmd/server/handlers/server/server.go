@@ -11,6 +11,8 @@ import (
 
 	agentStorage "github.com/ramil063/gometrics/cmd/agent/storage"
 	"github.com/ramil063/gometrics/cmd/server/handlers/middlewares"
+	"github.com/ramil063/gometrics/cmd/server/storage/db"
+	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
@@ -47,6 +49,18 @@ func Router(s Storager) chi.Router {
 		home(rw, r, s)
 	}
 	r.Get("/", homeHandlerFunction)
+
+	pingHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
+		ping(rw, r, s)
+	}
+	r.Get("/ping", pingHandlerFunction)
+
+	r.Route("/updates", func(r chi.Router) {
+		updatesHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
+			updates(rw, r, s)
+		}
+		r.With(middlewares.CheckPostMethodMw).Post("/", updatesHandlerFunction)
+	})
 
 	r.Route("/update", func(r chi.Router) {
 		r.Route("/{type}/{metric}", func(r chi.Router) {
@@ -255,5 +269,66 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 		logger.WriteErrorLog("error encoding response", err.Error())
 		return
 	}
+	logger.WriteDebugLog("", "sending HTTP 200 response")
+}
+
+// Home метод получения данных из всех метрик
+func ping(rw http.ResponseWriter, r *http.Request, dbs Storager) {
+	if err := db.CheckPing(dml.NewRepository()); err != nil {
+		logger.WriteErrorLog("Database storage ping error", err.Error())
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	rw.WriteHeader(http.StatusOK)
+}
+
+// Home метод получения данных из всех метрик
+func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
+	var metrics []models.Metrics
+	dec := json.NewDecoder(r.Body)
+	err := dec.Decode(&metrics)
+
+	if err != nil {
+		logger.WriteDebugLog("cannot decode request JSON body", err.Error())
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	rw.Header().Set("Content-Type", "application/json")
+	logMsg, _ := json.Marshal(metrics)
+	logger.WriteInfoLog("request body in updates/", string(logMsg))
+
+	result := make([]models.Metrics, len(metrics))
+
+	for i, m := range metrics {
+		result[i] = m
+
+		switch m.MType {
+		case "gauge":
+			if m.Value == nil {
+				d := float64(0)
+				m.Value = &d
+			}
+			dbs.SetGauge(m.ID, models.Gauge(*m.Value))
+			result[i].Value = m.Value
+		case "counter":
+			if m.Delta == nil {
+				d := int64(0)
+				m.Delta = &d
+			}
+			dbs.AddCounter(m.ID, models.Counter(*m.Delta))
+			newCounter, _ := dbs.GetCounter(m.ID)
+			result[i].Delta = &newCounter
+		}
+	}
+
+	enc := json.NewEncoder(rw)
+	if err := enc.Encode(result); err != nil {
+		logger.WriteErrorLog("error encoding response", err.Error())
+		return
+	}
+
 	logger.WriteDebugLog("", "sending HTTP 200 response")
 }
