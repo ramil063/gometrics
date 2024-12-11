@@ -60,12 +60,12 @@ func (s *FStorage) AddCounter(name string, value models.Counter) {
 	if err != nil {
 		logger.WriteErrorLog("error read metrics from file", err.Error())
 	}
-	oldValue := models.Counter(0)
-	if metrics != nil {
-		oldValue = metrics.Counters[name]
+	if metrics == nil {
+		metrics = s
+		metrics.Counters[name] = models.Counter(0)
 	}
 
-	metrics.Counters[name] = oldValue + value
+	metrics.Counters[name] += value
 
 	err = WriteMetricsToFile(metrics, handlers.FileStoragePath)
 	if err != nil {

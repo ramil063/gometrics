@@ -1,15 +1,16 @@
 package main
 
 import (
-	"github.com/ramil063/gometrics/cmd/agent/handlers"
 	"log"
+
+	"github.com/ramil063/gometrics/cmd/agent/handlers"
 )
 
 func main() {
 	handlers.ParseFlags()
 	c := handlers.NewJSONClient()
 	r := handlers.NewRequest()
-	var err = r.SendMetricsJSON(c, 100)
+	var err = r.SendMultipleMetricsJSON(c, 100)
 	if err != nil {
 		log.Fatal(err)
 	}
