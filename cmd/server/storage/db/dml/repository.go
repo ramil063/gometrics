@@ -41,7 +41,7 @@ func (dbr *Repository) ExecContext(ctx context.Context, query string, args ...an
 				return result, nil
 			}
 		}
-		return nil, internalErrors.NewDbError(err)
+		return nil, internalErrors.NewDBError(err)
 	}
 	return result, nil
 }
@@ -65,7 +65,7 @@ func (dbr *Repository) QueryContext(ctx context.Context, query string, args ...a
 		if errors.As(err, &pgconnErr) && pgerrcode.IsConnectionException(pgconnErr.Code) {
 			rows, err = retryQueryContext(dbr, internalErrors.TriesTimes, ctx, query, args)
 			if err != nil {
-				return nil, internalErrors.NewDbError(err)
+				return nil, internalErrors.NewDBError(err)
 			}
 		}
 	}
@@ -75,7 +75,7 @@ func (dbr *Repository) QueryContext(ctx context.Context, query string, args ...a
 func (dbr *Repository) Close() error {
 	err := dbr.Database.Close()
 	if err != nil {
-		return internalErrors.NewDbError(err)
+		return internalErrors.NewDBError(err)
 	}
 	return nil
 }
@@ -87,18 +87,18 @@ func (dbr *Repository) PingContext(ctx context.Context) error {
 		if errors.As(err, &pgconnErr) && pgerrcode.IsConnectionException(pgconnErr.Code) {
 			err = retryPing(dbr, ctx, internalErrors.TriesTimes)
 			if err != nil {
-				return internalErrors.NewDbError(err)
+				return internalErrors.NewDBError(err)
 			}
 		}
 	}
-	return nil
+	return err
 }
 
 func (dbr *Repository) SetDatabase() error {
 	database, err := dbr.Open()
 	if err != nil {
 		logger.WriteErrorLog("Database open error", err.Error())
-		return internalErrors.NewDbError(err)
+		return internalErrors.NewDBError(err)
 	}
 	dbr.Database = database
 	return nil
@@ -111,7 +111,7 @@ func (dbr *Repository) Open() (*sql.DB, error) {
 		if errors.As(err, &pgconnErr) && pgerrcode.IsConnectionException(pgconnErr.Code) {
 			result, err = retryOpen("pgx", handlers.DatabaseDSN, internalErrors.TriesTimes)
 			if err != nil {
-				return nil, internalErrors.NewDbError(err)
+				return nil, internalErrors.NewDBError(err)
 			}
 		}
 	}
@@ -141,7 +141,7 @@ func CreateOrUpdateCounter(dbr *Repository, name string, value models.Counter) (
 			int64(value),
 			name)
 		if err != nil {
-			return nil, internalErrors.NewDbError(err)
+			return nil, internalErrors.NewDBError(err)
 		}
 		return exec, nil
 	}
@@ -151,7 +151,7 @@ func CreateOrUpdateCounter(dbr *Repository, name string, value models.Counter) (
 		name,
 		float64(value))
 	if err != nil {
-		return nil, internalErrors.NewDbError(err)
+		return nil, internalErrors.NewDBError(err)
 	}
 	return exec, nil
 }
@@ -163,7 +163,7 @@ func CreateOrUpdateGauge(dbr *Repository, name string, value models.Gauge) (sql.
 
 	if row.Err() != nil {
 		logger.WriteErrorLog("SetGauge database query error", row.Err().Error())
-		return result, internalErrors.NewDbError(row.Err())
+		return result, internalErrors.NewDBError(row.Err())
 	}
 	var selectedName string
 	_ = row.Scan(&selectedName)
@@ -175,7 +175,7 @@ func CreateOrUpdateGauge(dbr *Repository, name string, value models.Gauge) (sql.
 			float64(value),
 			name)
 		if err != nil {
-			return nil, internalErrors.NewDbError(err)
+			return nil, internalErrors.NewDBError(err)
 		}
 		return exec, nil
 	}
@@ -185,7 +185,7 @@ func CreateOrUpdateGauge(dbr *Repository, name string, value models.Gauge) (sql.
 		name,
 		float64(value))
 	if err != nil {
-		return nil, internalErrors.NewDbError(err)
+		return nil, internalErrors.NewDBError(err)
 	}
 	return exec, nil
 }

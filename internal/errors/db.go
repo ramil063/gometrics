@@ -5,22 +5,22 @@ import (
 	"time"
 )
 
-type DbError struct {
+type DBError struct {
 	Time time.Time
 	Err  error
 }
 
-func (e *DbError) Error() string {
+func (e *DBError) Error() string {
 	return fmt.Sprintf("%v %v", e.Time.Format("2006-01-02 15:04:05"), e.Err)
 }
 
-func (e *DbError) Unwrap() error {
+func (e *DBError) Unwrap() error {
 	return e.Err
 }
 
-// NewDbError записывает ошибку err в тип DbError c текущим временем.
-func NewDbError(err error) error {
-	return &DbError{
+// NewDBError записывает ошибку err в тип DBError c текущим временем.
+func NewDBError(err error) error {
+	return &DBError{
 		Time: time.Now(),
 		Err:  err,
 	}
