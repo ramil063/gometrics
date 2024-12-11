@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
 	"time"
 
 	"github.com/jackc/pgerrcode"
@@ -65,6 +64,9 @@ func (dbr *Repository) QueryContext(ctx context.Context, query string, args ...a
 		var pgconnErr *pgconn.PgError
 		if errors.As(err, &pgconnErr) && pgerrcode.IsConnectionException(pgconnErr.Code) {
 			rows, err = retryQueryContext(dbr, internalErrors.TriesTimes, ctx, query, args)
+			if err != nil {
+				return nil, internalErrors.NewDbError(err)
+			}
 		}
 	}
 	return rows, nil
@@ -82,13 +84,12 @@ func (dbr *Repository) PingContext(ctx context.Context) error {
 	err := dbr.Database.PingContext(ctx)
 	if err != nil {
 		var pgconnErr *pgconn.PgError
-		if errors.As(err, &pgconnErr) /*&& pgerrcode.IsConnectionException(pgconnErr.Code)*/ {
-			log.Println("\n---------pgconn\n", err.Error(), "\n---------")
-			/**
-			попробовать пингануть 3 раза
-			*/
+		if errors.As(err, &pgconnErr) && pgerrcode.IsConnectionException(pgconnErr.Code) {
+			err = retryPing(dbr, ctx, internalErrors.TriesTimes)
+			if err != nil {
+				return internalErrors.NewDbError(err)
+			}
 		}
-		return internalErrors.NewDbError(err)
 	}
 	return nil
 }
@@ -107,10 +108,12 @@ func (dbr *Repository) Open() (*sql.DB, error) {
 	result, err := sql.Open("pgx", handlers.DatabaseDSN)
 	if err != nil {
 		var pgconnErr *pgconn.PgError
-		if errors.As(err, &pgconnErr) /*&& pgerrcode.IsConnectionException(pgconnErr.Code)*/ {
-			log.Println("\n---------pgconn\n", err.Error(), "\n---------")
+		if errors.As(err, &pgconnErr) && pgerrcode.IsConnectionException(pgconnErr.Code) {
+			result, err = retryOpen("pgx", handlers.DatabaseDSN, internalErrors.TriesTimes)
+			if err != nil {
+				return nil, internalErrors.NewDbError(err)
+			}
 		}
-		return nil, internalErrors.NewDbError(err)
 	}
 	return result, nil
 }
@@ -195,11 +198,6 @@ func retryQueryRowContext(dbr *Repository, tries []int, ctx context.Context, que
 		if row.Err() == nil {
 			break
 		}
-		/**
-		так же поступить с ExecContext, но он уже обернут
-		везде, где есть обращение к бд будет такая штука
-		потом сделать так же для файлов
-		*/
 	}
 	return row
 }
@@ -213,11 +211,6 @@ func retryQueryContext(dbr *Repository, tries []int, ctx context.Context, query 
 		if err == nil {
 			break
 		}
-		/**
-		так же поступить с ExecContext, но он уже обернут
-		везде, где есть обращение к бд будет такая штука
-		потом сделать так же для файлов
-		*/
 	}
 	return rows, err
 }
@@ -231,11 +224,31 @@ func retryExecContext(dbr *Repository, tries []int, ctx context.Context, query s
 		if err == nil {
 			break
 		}
-		/**
-		так же поступить с ExecContext, но он уже обернут
-		везде, где есть обращение к бд будет такая штука
-		потом сделать так же для файлов
-		*/
 	}
 	return result, err
+}
+
+func retryOpen(driverName, dataSourceName string, tries []int) (*sql.DB, error) {
+	var result *sql.DB
+	var err error
+	for try := 0; try < len(tries); try++ {
+		time.Sleep(time.Duration(tries[try]) * time.Second)
+		result, err = sql.Open(driverName, dataSourceName)
+		if err == nil {
+			break
+		}
+	}
+	return result, err
+}
+
+func retryPing(dbr *Repository, ctx context.Context, tries []int) error {
+	var err error
+	for try := 0; try < len(tries); try++ {
+		time.Sleep(time.Duration(tries[try]) * time.Second)
+		err = dbr.Database.PingContext(ctx)
+		if err == nil {
+			break
+		}
+	}
+	return err
 }

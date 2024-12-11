@@ -14,11 +14,6 @@ func retryOpenFile(name string, flag int, perm os.FileMode, tries []int) (*os.Fi
 		if err == nil {
 			break
 		}
-		/**
-		так же поступить с ExecContext, но он уже обернут
-		везде, где есть обращение к бд будет такая штука
-		потом сделать так же для файлов
-		*/
 	}
 	return file, err
 }

@@ -22,6 +22,7 @@ func (s *Storage) GetGauges() map[string]models.Gauge {
 
 	rows, err := dml.DBRepository.QueryContext(context.Background(), "SELECT name, value FROM gauge")
 	if err != nil {
+		logger.WriteErrorLog("QueryContext error when GetGauges worked", err.Error())
 		return result
 	}
 	// обязательно закрываем перед возвратом функции
@@ -59,6 +60,7 @@ func (s *Storage) GetCounters() map[string]models.Counter {
 	result := make(map[string]models.Counter)
 	rows, err := dml.DBRepository.QueryContext(context.Background(), "SELECT name, value FROM counter")
 	if err != nil {
+		logger.WriteErrorLog("QueryContext error when GetCounters worked", err.Error())
 		return result
 	}
 	// обязательно закрываем перед возвратом функции
