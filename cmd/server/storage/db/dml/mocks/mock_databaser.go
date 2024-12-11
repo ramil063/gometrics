@@ -98,6 +98,45 @@ func (mr *MockDataBaserMockRecorder) PingContext(arg0 interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PingContext", reflect.TypeOf((*MockDataBaser)(nil).PingContext), arg0)
 }
 
+// QueryContext mocks base method.
+func (m *MockDataBaser) QueryContext(arg0 context.Context, arg1 string, arg2 ...interface{}) (*sql.Rows, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "QueryContext", varargs...)
+	ret0, _ := ret[0].(*sql.Rows)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// QueryContext indicates an expected call of QueryContext.
+func (mr *MockDataBaserMockRecorder) QueryContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryContext", reflect.TypeOf((*MockDataBaser)(nil).QueryContext), varargs...)
+}
+
+// QueryRowContext mocks base method.
+func (m *MockDataBaser) QueryRowContext(arg0 context.Context, arg1 string, arg2 ...interface{}) *sql.Row {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "QueryRowContext", varargs...)
+	ret0, _ := ret[0].(*sql.Row)
+	return ret0
+}
+
+// QueryRowContext indicates an expected call of QueryRowContext.
+func (mr *MockDataBaserMockRecorder) QueryRowContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryRowContext", reflect.TypeOf((*MockDataBaser)(nil).QueryRowContext), varargs...)
+}
+
 // SetDatabase mocks base method.
 func (m *MockDataBaser) SetDatabase() error {
 	m.ctrl.T.Helper()

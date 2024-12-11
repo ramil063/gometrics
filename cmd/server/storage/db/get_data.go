@@ -2,13 +2,14 @@ package db
 
 import (
 	"context"
+
 	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
 
 func (s *Storage) GetGauge(name string) (float64, bool) {
-	row := dml.DBRepository.Database.QueryRowContext(context.Background(), "SELECT value FROM gauge WHERE name = $1", name)
+	row := dml.DBRepository.QueryRowContext(context.Background(), "SELECT value FROM gauge WHERE name = $1", name)
 	var selectedValue float64
 
 	err := row.Scan(&selectedValue)
@@ -19,7 +20,7 @@ func (s *Storage) GetGauge(name string) (float64, bool) {
 func (s *Storage) GetGauges() map[string]models.Gauge {
 	result := make(map[string]models.Gauge)
 
-	rows, err := dml.DBRepository.Database.QueryContext(context.Background(), "SELECT name, value FROM gauge")
+	rows, err := dml.DBRepository.QueryContext(context.Background(), "SELECT name, value FROM gauge")
 	if err != nil {
 		return result
 	}
@@ -47,7 +48,7 @@ func (s *Storage) GetGauges() map[string]models.Gauge {
 }
 
 func (s *Storage) GetCounter(name string) (int64, bool) {
-	row := dml.DBRepository.Database.QueryRowContext(context.Background(), "SELECT value FROM counter WHERE name = $1", name)
+	row := dml.DBRepository.QueryRowContext(context.Background(), "SELECT value FROM counter WHERE name = $1", name)
 	var selectedValue int64
 	err := row.Scan(&selectedValue)
 
@@ -56,7 +57,7 @@ func (s *Storage) GetCounter(name string) (int64, bool) {
 
 func (s *Storage) GetCounters() map[string]models.Counter {
 	result := make(map[string]models.Counter)
-	rows, err := dml.DBRepository.Database.QueryContext(context.Background(), "SELECT name, value FROM counter")
+	rows, err := dml.DBRepository.QueryContext(context.Background(), "SELECT name, value FROM counter")
 	if err != nil {
 		return result
 	}

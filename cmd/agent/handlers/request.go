@@ -3,14 +3,17 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"reflect"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/ramil063/gometrics/cmd/agent/storage"
+	internalErrors "github.com/ramil063/gometrics/internal/errors"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
@@ -80,6 +83,12 @@ func (c client) SendPostRequestWithBody(url string, body []byte) error {
 		return err
 	}
 	defer res.Body.Close()
+	var b []byte
+	res.Body.Read(b)
+	if res.StatusCode != http.StatusOK {
+		return internalErrors.NewRequestError(res.Status, res.StatusCode)
+	}
+
 	return nil
 }
 
@@ -236,8 +245,23 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) error {
 
 			if err := c.SendPostRequestWithBody(url, body); err != nil {
 				logger.WriteErrorLog("Error in request", err.Error())
+				var reqErr *internalErrors.RequestError
+				if errors.Is(err, reqErr) || errors.Is(err, syscall.ECONNREFUSED) {
+					retryToSendMetrics(c, url, body, internalErrors.TriesTimes)
+				}
 			}
 		}
 	}
 	return nil
+}
+
+func retryToSendMetrics(c JSONClienter, url string, body []byte, tries []int) {
+	for try := 0; try < len(tries); try++ {
+		time.Sleep(time.Duration(tries[try]) * time.Second)
+		err := c.SendPostRequestWithBody(url, body)
+		if err == nil {
+			break
+		}
+		logger.WriteErrorLog("Error in request by try:"+strconv.Itoa(try), err.Error())
+	}
 }

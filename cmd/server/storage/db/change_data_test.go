@@ -1,20 +1,21 @@
 package db
 
 import (
+	"testing"
+
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/golang/mock/gomock"
+
 	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"github.com/ramil063/gometrics/internal/models"
-	"testing"
 )
 
 func TestStorage_AddCounter(t *testing.T) {
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	dml.DBRepository.Database, _, _ = sqlmock.New()
+	var mock sqlmock.Sqlmock
+	dml.DBRepository.Database, mock, _ = sqlmock.New()
 	defer dml.DBRepository.Database.Close()
+
+	rows := sqlmock.NewRows([]string{"name"}).AddRow("1")
+	mock.ExpectQuery("^SELECT name FROM counter WHERE name = *").WithArgs("metric1").WillReturnRows(rows)
 
 	type fields struct {
 		Gauges   map[string]models.Gauge
@@ -53,9 +54,12 @@ func TestStorage_AddCounter(t *testing.T) {
 }
 
 func TestStorage_SetGauge(t *testing.T) {
-
-	dml.DBRepository.Database, _, _ = sqlmock.New()
+	var mock sqlmock.Sqlmock
+	dml.DBRepository.Database, mock, _ = sqlmock.New()
 	defer dml.DBRepository.Database.Close()
+
+	rows := sqlmock.NewRows([]string{"name"}).AddRow("1")
+	mock.ExpectQuery("^SELECT name FROM gauge WHERE name = *").WithArgs("metric1").WillReturnRows(rows)
 
 	type fields struct {
 		Gauges   map[string]models.Gauge

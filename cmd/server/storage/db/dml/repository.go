@@ -3,7 +3,15 @@ package dml
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"log"
+	"time"
+
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/ramil063/gometrics/cmd/server/handlers"
+	internalErrors "github.com/ramil063/gometrics/internal/errors"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
@@ -13,6 +21,8 @@ type Repository struct {
 }
 
 type DataBaser interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 	Open() (*sql.DB, error)
 	Close() error
@@ -23,28 +33,86 @@ type DataBaser interface {
 var DBRepository Repository
 
 func (dbr *Repository) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	return dbr.Database.ExecContext(ctx, query, args...)
+	result, err := dbr.Database.ExecContext(ctx, query, args...)
+	if err != nil {
+		var pgconnErr *pgconn.PgError
+		if errors.As(err, &pgconnErr) && pgerrcode.IsConnectionException(pgconnErr.Code) {
+			result, err = retryExecContext(dbr, internalErrors.TriesTimes, ctx, query, args)
+			if err == nil {
+				return result, nil
+			}
+		}
+		return nil, internalErrors.NewDbError(err)
+	}
+	return result, nil
+}
+
+func (dbr *Repository) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
+	row := dbr.Database.QueryRowContext(ctx, query, args...)
+	if row.Err() != nil {
+		var pgconnErr *pgconn.PgError
+		if errors.As(row.Err(), &pgconnErr) && pgerrcode.IsConnectionException(pgconnErr.Code) {
+			row = retryQueryRowContext(dbr, internalErrors.TriesTimes, ctx, query, args)
+		}
+	}
+	return row
+}
+
+func (dbr *Repository) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	rows, err := dbr.Database.QueryContext(ctx, query, args...)
+
+	if err != nil {
+		var pgconnErr *pgconn.PgError
+		if errors.As(err, &pgconnErr) && pgerrcode.IsConnectionException(pgconnErr.Code) {
+			rows, err = retryQueryContext(dbr, internalErrors.TriesTimes, ctx, query, args)
+		}
+	}
+	return rows, nil
 }
 
 func (dbr *Repository) Close() error {
-	return dbr.Database.Close()
+	err := dbr.Database.Close()
+	if err != nil {
+		return internalErrors.NewDbError(err)
+	}
+	return nil
 }
 
 func (dbr *Repository) PingContext(ctx context.Context) error {
-	return dbr.Database.PingContext(ctx)
+	err := dbr.Database.PingContext(ctx)
+	if err != nil {
+		var pgconnErr *pgconn.PgError
+		if errors.As(err, &pgconnErr) /*&& pgerrcode.IsConnectionException(pgconnErr.Code)*/ {
+			log.Println("\n---------pgconn\n", err.Error(), "\n---------")
+			/**
+			попробовать пингануть 3 раза
+			*/
+		}
+		return internalErrors.NewDbError(err)
+	}
+	return nil
 }
 
 func (dbr *Repository) SetDatabase() error {
 	database, err := dbr.Open()
 	if err != nil {
 		logger.WriteErrorLog("Database open error", err.Error())
+		return internalErrors.NewDbError(err)
 	}
 	dbr.Database = database
 	return nil
 }
 
 func (dbr *Repository) Open() (*sql.DB, error) {
-	return sql.Open("pgx", handlers.DatabaseDSN)
+	result, err := sql.Open("pgx", handlers.DatabaseDSN)
+	if err != nil {
+		var pgconnErr *pgconn.PgError
+		if errors.As(err, &pgconnErr) /*&& pgerrcode.IsConnectionException(pgconnErr.Code)*/ {
+			log.Println("\n---------pgconn\n", err.Error(), "\n---------")
+		}
+		return nil, internalErrors.NewDbError(err)
+	}
+	return result, nil
 }
 
 func NewRepository() *Repository {
@@ -54,52 +122,120 @@ func NewRepository() *Repository {
 }
 
 func CreateOrUpdateCounter(dbr *Repository, name string, value models.Counter) (sql.Result, error) {
-	var result sql.Result
-	row := dbr.Database.QueryRowContext(context.Background(), "SELECT name FROM counter WHERE name = $1", name)
+	var err error
+	row := dbr.QueryRowContext(context.Background(), "SELECT name FROM counter WHERE name = $1", name)
 
 	if row.Err() != nil {
 		logger.WriteErrorLog("AddCounter database query error", row.Err().Error())
-		return result, row.Err()
 	}
 	var selectedName string
 	_ = row.Scan(&selectedName)
 
 	if selectedName != "" {
-		return dbr.ExecContext(
+		exec, err := dbr.ExecContext(
 			context.Background(),
 			"UPDATE counter SET value = $1 + value WHERE name = $2",
 			int64(value),
 			name)
+		if err != nil {
+			return nil, internalErrors.NewDbError(err)
+		}
+		return exec, nil
 	}
-	return dbr.ExecContext(
+	exec, err := dbr.ExecContext(
 		context.Background(),
 		"INSERT INTO counter (name, value) VALUES ($1, $2)",
 		name,
 		float64(value))
+	if err != nil {
+		return nil, internalErrors.NewDbError(err)
+	}
+	return exec, nil
 }
 
 func CreateOrUpdateGauge(dbr *Repository, name string, value models.Gauge) (sql.Result, error) {
 	var result sql.Result
 
-	row := dbr.Database.QueryRowContext(context.Background(), "SELECT name FROM gauge WHERE name = $1", name)
+	row := dbr.QueryRowContext(context.Background(), "SELECT name FROM gauge WHERE name = $1", name)
 
 	if row.Err() != nil {
 		logger.WriteErrorLog("SetGauge database query error", row.Err().Error())
-		return result, row.Err()
+		return result, internalErrors.NewDbError(row.Err())
 	}
 	var selectedName string
 	_ = row.Scan(&selectedName)
 
 	if selectedName != "" {
-		return dbr.ExecContext(
+		exec, err := dbr.ExecContext(
 			context.Background(),
 			"UPDATE gauge SET value = $1 WHERE name = $2",
 			float64(value),
 			name)
+		if err != nil {
+			return nil, internalErrors.NewDbError(err)
+		}
+		return exec, nil
 	}
-	return dbr.ExecContext(
+	exec, err := dbr.ExecContext(
 		context.Background(),
 		"INSERT INTO gauge (name, value) VALUES ($1, $2)",
 		name,
 		float64(value))
+	if err != nil {
+		return nil, internalErrors.NewDbError(err)
+	}
+	return exec, nil
+}
+
+func retryQueryRowContext(dbr *Repository, tries []int, ctx context.Context, query string, args ...any) *sql.Row {
+	var row *sql.Row
+	for try := 0; try < len(tries); try++ {
+		time.Sleep(time.Duration(tries[try]) * time.Second)
+		row = dbr.Database.QueryRowContext(ctx, query, args)
+		if row.Err() == nil {
+			break
+		}
+		/**
+		так же поступить с ExecContext, но он уже обернут
+		везде, где есть обращение к бд будет такая штука
+		потом сделать так же для файлов
+		*/
+	}
+	return row
+}
+
+func retryQueryContext(dbr *Repository, tries []int, ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	var rows *sql.Rows
+	var err error
+	for try := 0; try < len(tries); try++ {
+		time.Sleep(time.Duration(tries[try]) * time.Second)
+		rows, err = dbr.Database.QueryContext(ctx, query, args)
+		if err == nil {
+			break
+		}
+		/**
+		так же поступить с ExecContext, но он уже обернут
+		везде, где есть обращение к бд будет такая штука
+		потом сделать так же для файлов
+		*/
+	}
+	return rows, err
+}
+
+func retryExecContext(dbr *Repository, tries []int, ctx context.Context, query string, args ...any) (sql.Result, error) {
+	var result sql.Result
+	var err error
+	for try := 0; try < len(tries); try++ {
+		time.Sleep(time.Duration(tries[try]) * time.Second)
+		result, err = dbr.Database.ExecContext(ctx, query, args...)
+		if err == nil {
+			break
+		}
+		/**
+		так же поступить с ExecContext, но он уже обернут
+		везде, где есть обращение к бд будет такая штука
+		потом сделать так же для файлов
+		*/
+	}
+	return result, err
 }

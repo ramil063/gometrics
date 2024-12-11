@@ -2,9 +2,9 @@ package db
 
 import (
 	"context"
-	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"time"
 
+	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )

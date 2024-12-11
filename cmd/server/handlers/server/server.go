@@ -294,9 +294,6 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 		return
 	}
 
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
-	rw.Header().Set("Content-Type", "application/json")
 	logMsg, _ := json.Marshal(metrics)
 	logger.WriteInfoLog("request body in updates/", string(logMsg))
 
@@ -323,6 +320,9 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 			result[i].Delta = &newCounter
 		}
 	}
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	rw.Header().Set("Content-Type", "application/json")
 
 	enc := json.NewEncoder(rw)
 	if err := enc.Encode(result); err != nil {

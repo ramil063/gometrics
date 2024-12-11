@@ -1,12 +1,14 @@
 package db
 
 import (
-	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
-	"github.com/ramil063/gometrics/internal/models"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
+	"github.com/ramil063/gometrics/internal/models"
 )
 
 func TestStorage_GetCounter(t *testing.T) {
@@ -61,7 +63,7 @@ func TestStorage_GetCounters(t *testing.T) {
 	dml.DBRepository.Database = db
 
 	rows := sqlmock.NewRows([]string{"name", "value"}).AddRow("metric1", "1").AddRow("metric2", "2")
-	mock.ExpectQuery("^SELECT name, value FROM counter").WillReturnRows(rows)
+	mock.ExpectQuery("^SELECT name, value FROM counter").WithArgs().WillReturnRows(rows)
 
 	tests := []struct {
 		name string
