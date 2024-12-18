@@ -81,7 +81,8 @@ func TestMemStorage_SetGauge(t *testing.T) {
 			ms := &MemStorage{
 				Gauges: tt.MemStorageMock.Gauges,
 			}
-			ms.SetGauge(tt.args.name, tt.args.value)
+			err := ms.SetGauge(tt.args.name, tt.args.value)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.want.value, ms.Gauges[tt.args.name])
 		})
 	}
