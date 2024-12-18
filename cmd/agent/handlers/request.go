@@ -121,7 +121,7 @@ func (r request) SendMetrics(c Clienter, maxCount int) error {
 
 			for i := 0; i < v.NumField(); i++ {
 				metricType := "gauge"
-				if typeOfS.Field(i).Name == "PoolCount" {
+				if typeOfS.Field(i).Name == "PollCount" {
 					metricType = "counter"
 				}
 				metricValue := fmt.Sprintf("%v", v.Field(i).Interface())

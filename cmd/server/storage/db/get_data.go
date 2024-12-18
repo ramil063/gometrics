@@ -8,13 +8,13 @@ import (
 	"github.com/ramil063/gometrics/internal/models"
 )
 
-func (s *Storage) GetGauge(name string) (float64, bool) {
+func (s *Storage) GetGauge(name string) (float64, error) {
 	row := dml.DBRepository.QueryRowContext(context.Background(), "SELECT value FROM gauge WHERE name = $1", name)
 	var selectedValue float64
 
 	err := row.Scan(&selectedValue)
 
-	return selectedValue, err == nil
+	return selectedValue, err
 }
 
 func (s *Storage) GetGauges() map[string]models.Gauge {
@@ -48,12 +48,12 @@ func (s *Storage) GetGauges() map[string]models.Gauge {
 	return result
 }
 
-func (s *Storage) GetCounter(name string) (int64, bool) {
+func (s *Storage) GetCounter(name string) (int64, error) {
 	row := dml.DBRepository.QueryRowContext(context.Background(), "SELECT value FROM counter WHERE name = $1", name)
 	var selectedValue int64
 	err := row.Scan(&selectedValue)
 
-	return selectedValue, err == nil
+	return selectedValue, err
 }
 
 func (s *Storage) GetCounters() map[string]models.Counter {

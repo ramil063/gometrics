@@ -21,17 +21,14 @@ func NewFileStorage() Storager {
 	}
 }
 
-func NewDBStorage(dsn string) Storager {
-	return &db.Storage{
-		Gauges:   make(map[string]models.Gauge),
-		Counters: make(map[string]models.Counter),
-	}
+func NewDBStorage() Storager {
+	return &db.Storage{}
 }
 
 // GetStorage получить хранителя данных
 func GetStorage(restore bool, dsn string) Storager {
 	if dsn != "" {
-		return NewDBStorage(dsn)
+		return NewDBStorage()
 	}
 	if restore {
 		return NewFileStorage()

@@ -162,7 +162,6 @@ func CreateOrUpdateGauge(dbr *Repository, name string, value models.Gauge) (sql.
 	row := dbr.QueryRowContext(context.Background(), "SELECT name FROM gauge WHERE name = $1", name)
 
 	if row.Err() != nil {
-		logger.WriteErrorLog("SetGauge database query error", row.Err().Error())
 		return result, internalErrors.NewDBError(row.Err())
 	}
 	var selectedName string

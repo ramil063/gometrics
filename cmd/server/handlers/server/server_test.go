@@ -15,7 +15,6 @@ import (
 	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"github.com/ramil063/gometrics/cmd/server/storage/db"
 	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
-	"github.com/ramil063/gometrics/internal/models"
 )
 
 func Test_update(t *testing.T) {
@@ -109,7 +108,8 @@ func Test_getValue(t *testing.T) {
 	}
 	for _, test := range testsG {
 		t.Run(test.name, func(t *testing.T) {
-			ms.SetGauge("a", 1.1)
+			err := ms.SetGauge("a", 1.1)
+			assert.NoError(t, err)
 			resp, _ := testRequest(t, ts, "GET", test.url)
 			defer resp.Body.Close()
 			assert.Equal(t, test.want.code, resp.StatusCode)
@@ -154,7 +154,8 @@ func Test_home(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ms.SetGauge("a", 1.1)
+			err := ms.SetGauge("a", 1.1)
+			assert.NoError(t, err)
 			resp, _ := testRequest(t, ts, "GET", test.url)
 			defer resp.Body.Close()
 			assert.Equal(t, test.want.code, resp.StatusCode)
@@ -238,7 +239,7 @@ func Test_getValueMetricsJSON(t *testing.T) {
 	handlers.FileStoragePath = filePath
 	getValueMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
 		s := GetStorage(false, "")
-		s.SetGauge("met1", 1.1)
+		_ = s.SetGauge("met1", 1.1)
 		getValueMetricsJSON(rw, req, s)
 	}
 	handler := http.HandlerFunc(getValueMetricsJSONHandlerFunction)
@@ -295,10 +296,7 @@ func Test_updates(t *testing.T) {
 	defer dml.DBRepository.Database.Close()
 
 	updatesHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-		s := &db.Storage{
-			Gauges:   map[string]models.Gauge{},
-			Counters: map[string]models.Counter{},
-		}
+		s := &db.Storage{}
 		updates(rw, req, s)
 	}
 	handler := http.HandlerFunc(updatesHandlerFunction)

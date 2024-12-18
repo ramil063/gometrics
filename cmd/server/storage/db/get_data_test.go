@@ -40,12 +40,12 @@ func TestStorage_GetCounter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Storage{}
 
-			got, got1 := s.GetCounter(tt.args.name)
+			got, err := s.GetCounter(tt.args.name)
 			if got != tt.want {
 				t.Errorf("GetCounter() got = %v, want %v", got, tt.want)
 			}
-			if got1 != tt.want1 {
-				t.Errorf("GetCounter() got1 = %v, want %v", got1, tt.want1)
+			if err != nil {
+				t.Errorf("GetCounter() got1 = %v, want %v", err, nil)
 			}
 			if err := mock.ExpectationsWereMet(); err != nil {
 				t.Errorf("not all expectations were met: %v", err)
@@ -109,8 +109,8 @@ func TestStorage_GetGauge(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("GetGauge() got = %v, want %v", got, tt.want)
 			}
-			if got1 != tt.wantOk {
-				t.Errorf("GetGauge() got1 = %v, want %v", got1, tt.wantOk)
+			if got1 != nil {
+				t.Errorf("GetGauge() got1 = %v, want %v", got1, nil)
 			}
 			if err := mock.ExpectationsWereMet(); err != nil {
 				t.Errorf("not all expectations were met: %v", err)

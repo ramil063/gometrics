@@ -1,30 +1,35 @@
 package db
 
 import (
+	"errors"
+
 	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
 
-func (s *Storage) SetGauge(name string, value models.Gauge) {
+func (s *Storage) SetGauge(name string, value models.Gauge) error {
 	result, err := dml.CreateOrUpdateGauge(&dml.DBRepository, name, value)
 
 	if err != nil {
 		logger.WriteErrorLog("SetGauge error in sql", err.Error())
-		return
+		return err
 	}
 	if result == nil {
 		logger.WriteErrorLog("SetGauge error in sql", "empty result")
-		return
+		return errors.New("SetGauge empty result")
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
 		logger.WriteErrorLog("SetGauge error", err.Error())
+		return err
 	}
 	if rows != 1 {
 		logger.WriteErrorLog("SetGauge error", "expected to affect 1 row")
+		return errors.New("SetGauge expected to affect 1 row")
 	}
+	return nil
 }
 
 func (s *Storage) AddCounter(name string, value models.Counter) {

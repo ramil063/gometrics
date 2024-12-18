@@ -6,13 +6,9 @@ import (
 
 	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"github.com/ramil063/gometrics/internal/logger"
-	"github.com/ramil063/gometrics/internal/models"
 )
 
-type Storage struct {
-	Gauges   map[string]models.Gauge
-	Counters map[string]models.Counter
-}
+type Storage struct{}
 
 func Init(dbr dml.DataBaser) error {
 	var err error

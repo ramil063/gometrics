@@ -20,14 +20,14 @@ import (
 var MaxSaverWorkTime = 900000
 
 type Gauger interface {
-	SetGauge(name string, value models.Gauge)
-	GetGauge(name string) (float64, bool)
+	SetGauge(name string, value models.Gauge) error
+	GetGauge(name string) (float64, error)
 	GetGauges() map[string]models.Gauge
 }
 
 type Counterer interface {
 	AddCounter(name string, value models.Counter)
-	GetCounter(name string) (int64, bool)
+	GetCounter(name string) (int64, error)
 	GetCounters() map[string]models.Counter
 }
 
@@ -50,10 +50,7 @@ func Router(s Storager) chi.Router {
 	}
 	r.Get("/", homeHandlerFunction)
 
-	pingHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
-		ping(rw, r, s)
-	}
-	r.Get("/ping", pingHandlerFunction)
+	r.Get("/ping", ping)
 
 	r.Route("/updates", func(r chi.Router) {
 		updatesHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
@@ -105,7 +102,10 @@ func update(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	switch metricType {
 	case "gauge":
 		value, _ := strconv.ParseFloat(metricValue, 64)
-		ms.SetGauge(metricName, models.Gauge(value))
+		err := ms.SetGauge(metricName, models.Gauge(value))
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "Gauge")
+		}
 	case "counter":
 		value, _ := strconv.ParseInt(metricValue, 10, 64)
 		ms.AddCounter(metricName, models.Counter(value))
@@ -121,11 +121,10 @@ func getValue(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	metricType := r.PathValue("type")
 	metricName := r.PathValue("metric")
 
-	var err error
 	switch metricType {
 	case "gauge":
-		value, ok := ms.GetGauge(metricName)
-		if !ok {
+		value, err := ms.GetGauge(metricName)
+		if err != nil {
 			log.Println("Error value of gauge is not Ok")
 			rw.WriteHeader(http.StatusNotFound)
 			return
@@ -134,9 +133,12 @@ func getValue(rw http.ResponseWriter, r *http.Request, ms Storager) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Header().Set("Content-Type", "text/plain")
 		_, err = io.WriteString(rw, strconv.FormatFloat(value, 'f', -1, 64))
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "Gauge")
+		}
 	case "counter":
-		value, ok := ms.GetCounter(metricName)
-		if !ok {
+		value, err := ms.GetCounter(metricName)
+		if err != nil {
 			log.Println("Error value of counter is not Ok")
 			rw.WriteHeader(http.StatusNotFound)
 			return
@@ -145,9 +147,9 @@ func getValue(rw http.ResponseWriter, r *http.Request, ms Storager) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Header().Set("Content-Type", "text/plain")
 		_, err = io.WriteString(rw, strconv.FormatInt(value, 10))
-	}
-	if err != nil {
-		return
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "Counter")
+		}
 	}
 }
 
@@ -210,10 +212,16 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 
 	switch metrics.MType {
 	case "gauge":
-		s.SetGauge(metrics.ID, models.Gauge(*metrics.Value))
+		err := s.SetGauge(metrics.ID, models.Gauge(*metrics.Value))
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "Gauge")
+		}
 	case "counter":
 		s.AddCounter(metrics.ID, models.Counter(*metrics.Delta))
-		newCounter, _ := s.GetCounter(metrics.ID)
+		newCounter, err := s.GetCounter(metrics.ID)
+		if err != nil {
+			logger.WriteDebugLog(err.Error(), "Counter")
+		}
 		metrics.Delta = &newCounter
 	}
 
@@ -245,18 +253,21 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 
 	switch metrics.MType {
 	case "gauge":
-		value, ok := s.GetGauge(metrics.ID)
-		if !ok {
-			logger.WriteInfoLog("Error value of gauge is not Ok", "ID:"+metrics.ID)
-			s.SetGauge(metrics.ID, 0)
+		value, err := s.GetGauge(metrics.ID)
+		if err != nil {
+			logger.WriteInfoLog(err.Error(), "ID:"+metrics.ID)
+			err = s.SetGauge(metrics.ID, 0)
+			if err != nil {
+				logger.WriteInfoLog(err.Error(), "ID:"+metrics.ID)
+			}
 			value = 0
 		}
 		metrics.Value = &value
 	case "counter":
 		s.AddCounter(metrics.ID, models.Counter(0))
-		delta, ok := s.GetCounter(metrics.ID)
-		if !ok {
-			logger.WriteInfoLog("Error value of counter is not Ok", "ID:"+metrics.ID)
+		delta, err := s.GetCounter(metrics.ID)
+		if err != nil {
+			logger.WriteInfoLog(err.Error(), "ID:"+metrics.ID)
 		}
 		metrics.Delta = &delta
 	}
@@ -273,7 +284,7 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 }
 
 // Home метод получения данных из всех метрик
-func ping(rw http.ResponseWriter, r *http.Request, dbs Storager) {
+func ping(rw http.ResponseWriter, r *http.Request) {
 	if err := db.CheckPing(dml.NewRepository()); err != nil {
 		logger.WriteErrorLog("Database storage ping error", err.Error())
 		rw.WriteHeader(http.StatusInternalServerError)
@@ -308,7 +319,10 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 				d := float64(0)
 				m.Value = &d
 			}
-			dbs.SetGauge(m.ID, models.Gauge(*m.Value))
+			err = dbs.SetGauge(m.ID, models.Gauge(*m.Value))
+			if err != nil {
+				logger.WriteErrorLog(err.Error(), "ID:"+m.ID)
+			}
 			result[i].Value = m.Value
 		case "counter":
 			if m.Delta == nil {
@@ -316,7 +330,10 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 				m.Delta = &d
 			}
 			dbs.AddCounter(m.ID, models.Counter(*m.Delta))
-			newCounter, _ := dbs.GetCounter(m.ID)
+			newCounter, err := dbs.GetCounter(m.ID)
+			if err != nil {
+				logger.WriteErrorLog(err.Error(), "ID:"+m.ID)
+			}
 			result[i].Delta = &newCounter
 		}
 	}
