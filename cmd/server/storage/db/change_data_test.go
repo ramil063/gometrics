@@ -1,6 +1,7 @@
 package db
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -48,6 +49,7 @@ func TestStorage_SetGauge(t *testing.T) {
 
 	rows := sqlmock.NewRows([]string{"name"}).AddRow("1")
 	mock.ExpectQuery("^SELECT name FROM gauge WHERE name = *").WithArgs("metric1").WillReturnRows(rows)
+	mock.ExpectExec("^UPDATE gauge SET value = *").WithArgs(float64(1), "metric1").WillReturnResult(sqlmock.NewResult(1, 1))
 
 	type args struct {
 		name  string
@@ -68,9 +70,7 @@ func TestStorage_SetGauge(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Storage{}
 			err := s.SetGauge(tt.args.name, tt.args.value)
-			if err != nil {
-
-			}
+			assert.NoError(t, err)
 		})
 	}
 }
