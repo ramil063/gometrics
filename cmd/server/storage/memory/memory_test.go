@@ -44,7 +44,8 @@ func TestMemStorage_AddCounter(t *testing.T) {
 			ms := &MemStorage{
 				Counters: tt.MemStorageMock.Counters,
 			}
-			ms.AddCounter(tt.args.name, tt.args.value)
+			err := ms.AddCounter(tt.args.name, tt.args.value)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.want.value, ms.Counters[tt.args.name])
 		})
 	}
@@ -81,7 +82,8 @@ func TestMemStorage_SetGauge(t *testing.T) {
 			ms := &MemStorage{
 				Gauges: tt.MemStorageMock.Gauges,
 			}
-			ms.SetGauge(tt.args.name, tt.args.value)
+			err := ms.SetGauge(tt.args.name, tt.args.value)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.want.value, ms.Gauges[tt.args.name])
 		})
 	}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ramil063/gometrics/cmd/agent/storage"
+	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
 
@@ -36,9 +37,15 @@ func PrepareMetricsValues(s Storager, m storage.Monitor) {
 		metricValue, _ := strconv.ParseFloat(fmt.Sprintf("%v", v.Field(i).Interface()), 64)
 
 		if typeOfS.Field(i).Name == "PollCount" {
-			s.AddCounter(metricID, models.Counter(1))
+			err := s.AddCounter(metricID, models.Counter(1))
+			if err != nil {
+				logger.WriteErrorLog(err.Error(), "Counter")
+			}
 		} else {
-			s.SetGauge(metricID, models.Gauge(metricValue))
+			err := s.SetGauge(metricID, models.Gauge(metricValue))
+			if err != nil {
+				logger.WriteErrorLog(err.Error(), "Gauge")
+			}
 		}
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/ramil063/gometrics/internal/errors"
 	"github.com/ramil063/gometrics/internal/logger"
 )
 
@@ -17,7 +18,10 @@ type Writer struct {
 func NewWriter(filename string) (*Writer, error) {
 	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		return nil, err
+		file, err = retryOpenFile(filename, os.O_RDONLY|os.O_CREATE, 0666, errors.TriesTimes)
+		if err != nil {
+			return nil, errors.NewFileError(err)
+		}
 	}
 
 	return &Writer{
@@ -38,7 +42,7 @@ func WriteMetricsToFile(metrics *FStorage, filepath string) error {
 	err = Writer.WriteMetrics(metrics)
 	if err != nil {
 		logger.WriteErrorLog("error write metrics", err.Error())
-		return err
+		return errors.NewFileError(err)
 	}
 	return nil
 }
@@ -46,23 +50,31 @@ func WriteMetricsToFile(metrics *FStorage, filepath string) error {
 func (w *Writer) WriteMetrics(metrics *FStorage) error {
 	data, err := json.Marshal(&metrics)
 	if err != nil {
-		return err
+		return errors.NewFileError(err)
 	}
 
 	// записываем событие в буфер
 	if _, err := w.writer.Write(data); err != nil {
-		return err
+		return errors.NewFileError(err)
 	}
 
 	// добавляем перенос строки
 	if err := w.writer.WriteByte('\n'); err != nil {
-		return err
+		return errors.NewFileError(err)
 	}
 
 	// записываем буфер в файл
-	return w.writer.Flush()
+	err = w.writer.Flush()
+	if err != nil {
+		return errors.NewFileError(err)
+	}
+	return nil
 }
 
 func (w *Writer) Close() error {
-	return w.file.Close()
+	err := w.file.Close()
+	if err != nil {
+		return errors.NewFileError(err)
+	}
+	return nil
 }
