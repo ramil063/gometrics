@@ -16,8 +16,7 @@ type FStorage struct {
 func (s *FStorage) SetGauge(name string, value models.Gauge) error {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {
-		logger.WriteErrorLog("error read metrics from file", err.Error())
-		return err
+		logger.WriteErrorLog(err.Error(), "ReadMetricsFromFile SetGauge")
 	}
 	if metrics == nil {
 		metrics = s
@@ -26,7 +25,7 @@ func (s *FStorage) SetGauge(name string, value models.Gauge) error {
 
 	err = WriteMetricsToFile(metrics, handlers.FileStoragePath)
 	if err != nil {
-		logger.WriteErrorLog("error write metrics to file", err.Error())
+		logger.WriteErrorLog(err.Error(), "WriteMetricsToFile SetGauge")
 	}
 	return err
 }
@@ -34,7 +33,7 @@ func (s *FStorage) SetGauge(name string, value models.Gauge) error {
 func (s *FStorage) GetGauge(name string) (float64, error) {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {
-		logger.WriteErrorLog("error read metrics from file", err.Error())
+		logger.WriteErrorLog(err.Error(), "ReadMetricsFromFile GetGauge")
 	}
 	if metrics == nil {
 		return 0.0, errors.New("no metrics found")
@@ -49,8 +48,7 @@ func (s *FStorage) GetGauge(name string) (float64, error) {
 func (s *FStorage) GetGauges() (map[string]models.Gauge, error) {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {
-		logger.WriteErrorLog("error read metrics from file", err.Error())
-		return nil, err
+		logger.WriteErrorLog(err.Error(), "ReadMetricsFromFile GetGauges")
 	}
 	if metrics != nil {
 		return metrics.Gauges, nil
@@ -58,7 +56,7 @@ func (s *FStorage) GetGauges() (map[string]models.Gauge, error) {
 	metrics = s
 	err = WriteMetricsToFile(metrics, handlers.FileStoragePath)
 	if err != nil {
-		logger.WriteErrorLog("error write metrics to file", err.Error())
+		logger.WriteErrorLog(err.Error(), "WriteMetricsToFile GetGauges")
 		return nil, err
 	}
 	return metrics.Gauges, err
@@ -67,8 +65,7 @@ func (s *FStorage) GetGauges() (map[string]models.Gauge, error) {
 func (s *FStorage) AddCounter(name string, value models.Counter) error {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {
-		logger.WriteErrorLog("error read metrics from file", err.Error())
-		return err
+		logger.WriteErrorLog(err.Error(), "ReadMetricsFromFile AddCounter")
 	}
 	if metrics == nil {
 		metrics = s
@@ -79,7 +76,7 @@ func (s *FStorage) AddCounter(name string, value models.Counter) error {
 
 	err = WriteMetricsToFile(metrics, handlers.FileStoragePath)
 	if err != nil {
-		logger.WriteErrorLog("error write metrics to file", err.Error())
+		logger.WriteErrorLog(err.Error(), "WriteMetricsToFile AddCounter")
 	}
 	return err
 }
@@ -87,7 +84,8 @@ func (s *FStorage) AddCounter(name string, value models.Counter) error {
 func (s *FStorage) GetCounter(name string) (int64, error) {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {
-		logger.WriteErrorLog("error read metrics from file", err.Error())
+		logger.WriteErrorLog(err.Error(), "ReadMetricsFromFile GetCounter")
+		return 0, err
 	}
 	if metrics == nil {
 		return 0, errors.New("metrics not found")
@@ -103,8 +101,7 @@ func (s *FStorage) GetCounter(name string) (int64, error) {
 func (s *FStorage) GetCounters() (map[string]models.Counter, error) {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {
-		logger.WriteErrorLog("error read metrics from file", err.Error())
-		return nil, err
+		logger.WriteErrorLog(err.Error(), "ReadMetricsFromFile GetCounters")
 	}
 	if metrics != nil {
 		return metrics.Counters, nil
@@ -113,7 +110,7 @@ func (s *FStorage) GetCounters() (map[string]models.Counter, error) {
 	metrics = s
 	err = WriteMetricsToFile(metrics, handlers.FileStoragePath)
 	if err != nil {
-		logger.WriteErrorLog("error write metrics to file", err.Error())
+		logger.WriteErrorLog(err.Error(), "WriteMetricsToFile GetCounters")
 	}
 	return metrics.Counters, err
 }
