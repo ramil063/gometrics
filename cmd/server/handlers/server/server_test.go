@@ -126,7 +126,8 @@ func Test_getValue(t *testing.T) {
 	}
 	for _, test := range testsC {
 		t.Run(test.name, func(t *testing.T) {
-			ms.AddCounter("a", 1)
+			err := ms.AddCounter("a", 1)
+			assert.NoError(t, err)
 			resp, _ := testRequest(t, ts, "GET", test.url)
 			defer resp.Body.Close()
 			assert.Equal(t, test.want.code, resp.StatusCode)

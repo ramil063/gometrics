@@ -17,6 +17,7 @@ func TestStorage_AddCounter(t *testing.T) {
 
 	rows := sqlmock.NewRows([]string{"name"}).AddRow("1")
 	mock.ExpectQuery("^SELECT name FROM counter WHERE name = *").WithArgs("metric1").WillReturnRows(rows)
+	mock.ExpectExec("^UPDATE counter SET value = *").WithArgs(int64(1), "metric1").WillReturnResult(sqlmock.NewResult(1, 1))
 
 	type args struct {
 		name  string
@@ -37,7 +38,8 @@ func TestStorage_AddCounter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Storage{}
-			s.AddCounter(tt.args.name, tt.args.value)
+			err := s.AddCounter(tt.args.name, tt.args.value)
+			assert.NoError(t, err)
 		})
 	}
 }

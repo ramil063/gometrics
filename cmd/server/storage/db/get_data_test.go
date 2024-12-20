@@ -74,7 +74,8 @@ func TestStorage_GetCounters(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Storage{}
-			got := s.GetCounters()
+			got, err := s.GetCounters()
+			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -139,7 +140,9 @@ func TestStorage_GetGauges(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Storage{}
-			if got := s.GetGauges(); !reflect.DeepEqual(got, tt.want) {
+			got, err := s.GetGauges()
+			assert.NoError(t, err)
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetGauges() = %v, want %v", got, tt.want)
 			}
 		})

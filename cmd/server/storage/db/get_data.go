@@ -17,13 +17,13 @@ func (s *Storage) GetGauge(name string) (float64, error) {
 	return selectedValue, err
 }
 
-func (s *Storage) GetGauges() map[string]models.Gauge {
+func (s *Storage) GetGauges() (map[string]models.Gauge, error) {
 	result := make(map[string]models.Gauge)
 
 	rows, err := dml.DBRepository.QueryContext(context.Background(), "SELECT name, value FROM gauge")
 	if err != nil {
 		logger.WriteErrorLog("QueryContext error when GetGauges worked", err.Error())
-		return result
+		return result, err
 	}
 	// обязательно закрываем перед возвратом функции
 	defer rows.Close()
@@ -35,7 +35,7 @@ func (s *Storage) GetGauges() map[string]models.Gauge {
 		err = rows.Scan(&name, &value)
 		if err != nil {
 			logger.WriteErrorLog("GetGauges error in sql", err.Error())
-			continue
+			return nil, err
 		}
 		result[name] = models.Gauge(value)
 	}
@@ -44,8 +44,9 @@ func (s *Storage) GetGauges() map[string]models.Gauge {
 	err = rows.Err()
 	if err != nil {
 		logger.WriteErrorLog("GetGauges error in rows", err.Error())
+		return nil, err
 	}
-	return result
+	return result, err
 }
 
 func (s *Storage) GetCounter(name string) (int64, error) {
@@ -56,12 +57,12 @@ func (s *Storage) GetCounter(name string) (int64, error) {
 	return selectedValue, err
 }
 
-func (s *Storage) GetCounters() map[string]models.Counter {
+func (s *Storage) GetCounters() (map[string]models.Counter, error) {
 	result := make(map[string]models.Counter)
 	rows, err := dml.DBRepository.QueryContext(context.Background(), "SELECT name, value FROM counter")
 	if err != nil {
 		logger.WriteErrorLog("QueryContext error when GetCounters worked", err.Error())
-		return result
+		return result, err
 	}
 	// обязательно закрываем перед возвратом функции
 	defer rows.Close()
@@ -82,5 +83,5 @@ func (s *Storage) GetCounters() map[string]models.Counter {
 	if err != nil {
 		logger.WriteErrorLog("GetCounters error in rows", err.Error())
 	}
-	return result
+	return result, err
 }

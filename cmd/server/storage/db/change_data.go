@@ -32,23 +32,26 @@ func (s *Storage) SetGauge(name string, value models.Gauge) error {
 	return nil
 }
 
-func (s *Storage) AddCounter(name string, value models.Counter) {
+func (s *Storage) AddCounter(name string, value models.Counter) error {
 	result, err := dml.CreateOrUpdateCounter(&dml.DBRepository, name, value)
 
 	if err != nil {
 		logger.WriteErrorLog("AddCounter error in sql", err.Error())
-		return
+		return err
 	}
 	if result == nil {
 		logger.WriteErrorLog("AddCounter error in sql", "empty result")
-		return
+		return errors.New("AddCounter empty result")
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
 		logger.WriteErrorLog("AddCounter error", err.Error())
+		return err
 	}
 	if rows != 1 {
 		logger.WriteErrorLog("AddCounter error", "expected to affect 1 row")
+		return errors.New("AddCounter expected to affect 1 row")
 	}
+	return nil
 }

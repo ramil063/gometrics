@@ -47,7 +47,8 @@ func TestFStorage_AddCounter(t *testing.T) {
 				Gauges:   tt.fields.Gauges,
 				Counters: tt.fields.Counters,
 			}
-			s.AddCounter(tt.args.name, tt.args.value)
+			err = s.AddCounter(tt.args.name, tt.args.value)
+			assert.NoError(t, err)
 			got, err := s.GetCounter(tt.args.name)
 			assert.NoError(t, err)
 			assert.Equal(t, int64(tt.fields.Counters[tt.args.name]+tt.args.value), got)
@@ -126,7 +127,9 @@ func TestFStorage_GetCounters(t *testing.T) {
 				Gauges:   tt.fields.Gauges,
 				Counters: tt.fields.Counters,
 			}
-			assert.Equalf(t, tt.want, s.GetCounters(), "GetCounters()")
+			got, err := s.GetCounters()
+			assert.NoError(t, err)
+			assert.Equalf(t, tt.want, got, "GetCounters()")
 		})
 	}
 }
@@ -203,7 +206,9 @@ func TestFStorage_GetGauges(t *testing.T) {
 				Gauges:   tt.fields.Gauges,
 				Counters: tt.fields.Counters,
 			}
-			assert.Equalf(t, tt.want, s.GetGauges(), "GetGauges()")
+			got, err := s.GetGauges()
+			assert.NoError(t, err)
+			assert.Equalf(t, tt.want, got, "GetGauges()")
 		})
 	}
 }
@@ -245,7 +250,9 @@ func TestFStorage_SetGauge(t *testing.T) {
 			}
 			err = s.SetGauge(tt.args.name, tt.args.value)
 			assert.NoError(t, err)
-			assert.Equalf(t, tt.want, s.GetGauges(), "GetGauges()")
+			got, err := s.GetGauges()
+			assert.NoError(t, err)
+			assert.Equalf(t, tt.want, got, "GetGauges()")
 		})
 	}
 }

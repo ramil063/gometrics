@@ -118,10 +118,10 @@ func (dbr *Repository) Open() (*sql.DB, error) {
 	return result, nil
 }
 
-func NewRepository() *Repository {
+func NewRepository() (*Repository, error) {
 	rep := &Repository{}
-	_ = rep.SetDatabase()
-	return rep
+	err := rep.SetDatabase()
+	return rep, err
 }
 
 func CreateOrUpdateCounter(dbr *Repository, name string, value models.Counter) (sql.Result, error) {

@@ -3,6 +3,7 @@ package memory
 import (
 	"errors"
 
+	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
 
@@ -25,16 +26,18 @@ func (ms *MemStorage) GetGauge(name string) (float64, error) {
 	return float64(val), err
 }
 
-func (ms *MemStorage) GetGauges() map[string]models.Gauge {
-	return ms.Gauges
+func (ms *MemStorage) GetGauges() (map[string]models.Gauge, error) {
+	return ms.Gauges, nil
 }
 
-func (ms *MemStorage) AddCounter(name string, value models.Counter) {
+func (ms *MemStorage) AddCounter(name string, value models.Counter) error {
 	oldValue, ok := ms.Counters[name]
 	if !ok {
 		oldValue = 0
+		logger.WriteInfoLog("Can't find counter", "AddCounter")
 	}
 	ms.Counters[name] = oldValue + value
+	return nil
 }
 
 func (ms *MemStorage) GetCounter(name string) (int64, error) {
@@ -46,6 +49,6 @@ func (ms *MemStorage) GetCounter(name string) (int64, error) {
 	return int64(val), err
 }
 
-func (ms *MemStorage) GetCounters() map[string]models.Counter {
-	return ms.Counters
+func (ms *MemStorage) GetCounters() (map[string]models.Counter, error) {
+	return ms.Counters, nil
 }

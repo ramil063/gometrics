@@ -22,13 +22,13 @@ var MaxSaverWorkTime = 900000
 type Gauger interface {
 	SetGauge(name string, value models.Gauge) error
 	GetGauge(name string) (float64, error)
-	GetGauges() map[string]models.Gauge
+	GetGauges() (map[string]models.Gauge, error)
 }
 
 type Counterer interface {
-	AddCounter(name string, value models.Counter)
+	AddCounter(name string, value models.Counter) error
 	GetCounter(name string) (int64, error)
-	GetCounters() map[string]models.Counter
+	GetCounters() (map[string]models.Counter, error)
 }
 
 type Storager interface {
@@ -108,7 +108,10 @@ func update(rw http.ResponseWriter, r *http.Request, ms Storager) {
 		}
 	case "counter":
 		value, _ := strconv.ParseInt(metricValue, 10, 64)
-		ms.AddCounter(metricName, models.Counter(value))
+		err := ms.AddCounter(metricName, models.Counter(value))
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "Counter")
+		}
 	}
 	_, err := io.WriteString(rw, "")
 	if err != nil {
@@ -160,17 +163,25 @@ func home(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	rw.Header().Set("Content-Type", "text/html")
 
 	bodyGauge := ""
-	for key, g := range ms.GetGauges() {
+	gauges, err := ms.GetGauges()
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "Gauge")
+	}
+	for key, g := range gauges {
 		str := strconv.FormatFloat(float64(g), 'f', -1, 64)
 		bodyGauge += `<div>` + key + `-` + str + `</div>`
 	}
 	bodyCounters := ""
-	for key, c := range ms.GetCounters() {
+	counters, err := ms.GetCounters()
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "GetCounters")
+	}
+	for key, c := range counters {
 		str := strconv.FormatInt(int64(c), 10)
 		bodyCounters += `<div>` + key + `-` + str + `</div>`
 	}
 
-	_, err := io.WriteString(rw, `
+	_, err = io.WriteString(rw, `
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -186,6 +197,7 @@ func home(rw http.ResponseWriter, r *http.Request, ms Storager) {
 </html>
 `)
 	if err != nil {
+		logger.WriteErrorLog(err.Error(), "WriteString")
 		return
 	}
 }
@@ -214,13 +226,16 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 	case "gauge":
 		err := s.SetGauge(metrics.ID, models.Gauge(*metrics.Value))
 		if err != nil {
-			logger.WriteErrorLog(err.Error(), "Gauge")
+			logger.WriteErrorLog(err.Error(), "SetGauge")
 		}
 	case "counter":
-		s.AddCounter(metrics.ID, models.Counter(*metrics.Delta))
+		err := s.AddCounter(metrics.ID, models.Counter(*metrics.Delta))
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "AddCounter")
+		}
 		newCounter, err := s.GetCounter(metrics.ID)
 		if err != nil {
-			logger.WriteDebugLog(err.Error(), "Counter")
+			logger.WriteDebugLog(err.Error(), "GetCounter")
 		}
 		metrics.Delta = &newCounter
 	}
@@ -255,19 +270,22 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 	case "gauge":
 		value, err := s.GetGauge(metrics.ID)
 		if err != nil {
-			logger.WriteInfoLog(err.Error(), "ID:"+metrics.ID)
+			logger.WriteInfoLog(err.Error(), "GetGauge ID:"+metrics.ID)
 			err = s.SetGauge(metrics.ID, 0)
 			if err != nil {
-				logger.WriteInfoLog(err.Error(), "ID:"+metrics.ID)
+				logger.WriteInfoLog(err.Error(), "SetGauge ID:"+metrics.ID)
 			}
 			value = 0
 		}
 		metrics.Value = &value
 	case "counter":
-		s.AddCounter(metrics.ID, models.Counter(0))
+		err := s.AddCounter(metrics.ID, models.Counter(0))
+		if err != nil {
+			logger.WriteInfoLog(err.Error(), "AddCounter ID:"+metrics.ID)
+		}
 		delta, err := s.GetCounter(metrics.ID)
 		if err != nil {
-			logger.WriteInfoLog(err.Error(), "ID:"+metrics.ID)
+			logger.WriteInfoLog(err.Error(), "GetCounter ID:"+metrics.ID)
 		}
 		metrics.Delta = &delta
 	}
@@ -285,7 +303,13 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 
 // Home метод получения данных из всех метрик
 func ping(rw http.ResponseWriter, r *http.Request) {
-	if err := db.CheckPing(dml.NewRepository()); err != nil {
+	rep, err := dml.NewRepository()
+	if err != nil {
+		logger.WriteErrorLog("Database storage ping error", err.Error())
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if err = db.CheckPing(rep); err != nil {
 		logger.WriteErrorLog("Database storage ping error", err.Error())
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
@@ -321,7 +345,7 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 			}
 			err = dbs.SetGauge(m.ID, models.Gauge(*m.Value))
 			if err != nil {
-				logger.WriteErrorLog(err.Error(), "ID:"+m.ID)
+				logger.WriteErrorLog(err.Error(), "SetGauge ID:"+m.ID)
 			}
 			result[i].Value = m.Value
 		case "counter":
@@ -329,10 +353,13 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 				d := int64(0)
 				m.Delta = &d
 			}
-			dbs.AddCounter(m.ID, models.Counter(*m.Delta))
+			err = dbs.AddCounter(m.ID, models.Counter(*m.Delta))
+			if err != nil {
+				logger.WriteErrorLog(err.Error(), "AddCounter ID:"+m.ID)
+			}
 			newCounter, err := dbs.GetCounter(m.ID)
 			if err != nil {
-				logger.WriteErrorLog(err.Error(), "ID:"+m.ID)
+				logger.WriteErrorLog(err.Error(), "GetCounter ID:"+m.ID)
 			}
 			result[i].Delta = &newCounter
 		}
@@ -342,7 +369,7 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 	rw.Header().Set("Content-Type", "application/json")
 
 	enc := json.NewEncoder(rw)
-	if err := enc.Encode(result); err != nil {
+	if err = enc.Encode(result); err != nil {
 		logger.WriteErrorLog("error encoding response", err.Error())
 		return
 	}

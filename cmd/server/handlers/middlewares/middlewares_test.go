@@ -336,7 +336,7 @@ func TestGZIPMiddleware(t *testing.T) {
 			Counters: make(map[string]models.Counter),
 		}
 
-		ms.AddCounter(metrics.ID, models.Counter(0))
+		_ = ms.AddCounter(metrics.ID, models.Counter(0))
 		delta, _ := ms.GetCounter(metrics.ID)
 		metrics.Delta = &delta
 

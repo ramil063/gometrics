@@ -46,26 +46,29 @@ func (s *FStorage) GetGauge(name string) (float64, error) {
 	return float64(val), err
 }
 
-func (s *FStorage) GetGauges() map[string]models.Gauge {
+func (s *FStorage) GetGauges() (map[string]models.Gauge, error) {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {
 		logger.WriteErrorLog("error read metrics from file", err.Error())
+		return nil, err
 	}
 	if metrics != nil {
-		return metrics.Gauges
+		return metrics.Gauges, nil
 	}
 	metrics = s
 	err = WriteMetricsToFile(metrics, handlers.FileStoragePath)
 	if err != nil {
 		logger.WriteErrorLog("error write metrics to file", err.Error())
+		return nil, err
 	}
-	return metrics.Gauges
+	return metrics.Gauges, err
 }
 
-func (s *FStorage) AddCounter(name string, value models.Counter) {
+func (s *FStorage) AddCounter(name string, value models.Counter) error {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {
 		logger.WriteErrorLog("error read metrics from file", err.Error())
+		return err
 	}
 	if metrics == nil {
 		metrics = s
@@ -78,6 +81,7 @@ func (s *FStorage) AddCounter(name string, value models.Counter) {
 	if err != nil {
 		logger.WriteErrorLog("error write metrics to file", err.Error())
 	}
+	return err
 }
 
 func (s *FStorage) GetCounter(name string) (int64, error) {
@@ -96,13 +100,14 @@ func (s *FStorage) GetCounter(name string) (int64, error) {
 	return int64(val), err
 }
 
-func (s *FStorage) GetCounters() map[string]models.Counter {
+func (s *FStorage) GetCounters() (map[string]models.Counter, error) {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {
 		logger.WriteErrorLog("error read metrics from file", err.Error())
+		return nil, err
 	}
 	if metrics != nil {
-		return metrics.Counters
+		return metrics.Counters, nil
 	}
 
 	metrics = s
@@ -110,5 +115,5 @@ func (s *FStorage) GetCounters() map[string]models.Counter {
 	if err != nil {
 		logger.WriteErrorLog("error write metrics to file", err.Error())
 	}
-	return metrics.Counters
+	return metrics.Counters, err
 }
