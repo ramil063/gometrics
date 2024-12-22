@@ -14,61 +14,61 @@ type MemStorage struct {
 	mx       sync.RWMutex
 }
 
-func (s *MemStorage) StoreGaugeValue(key string, value models.Gauge) {
-	s.mx.Lock()
-	defer s.mx.Unlock()
+func (ms *MemStorage) StoreGaugeValue(key string, value models.Gauge) {
+	ms.mx.Lock()
+	defer ms.mx.Unlock()
 
-	s.Gauges[key] = value
+	ms.Gauges[key] = value
 }
 
-func (s *MemStorage) GetGaugeValue(key string) (models.Gauge, error) {
-	s.mx.RLock()
-	defer s.mx.RUnlock()
+func (ms *MemStorage) GetGaugeValue(key string) (models.Gauge, error) {
+	ms.mx.RLock()
+	defer ms.mx.RUnlock()
 
 	var err error
-	val, ok := s.Gauges[key]
+	val, ok := ms.Gauges[key]
 	if !ok {
 		err = errors.New("can't set gauge for unknown metric")
 	}
 	return val, err
 }
 
-func (s *MemStorage) GetAllGauges() map[string]models.Gauge {
-	s.mx.RLock()
-	defer s.mx.RUnlock()
+func (ms *MemStorage) GetAllGauges() map[string]models.Gauge {
+	ms.mx.RLock()
+	defer ms.mx.RUnlock()
 
-	mapCopy := make(map[string]models.Gauge, len(s.Gauges))
-	for key, val := range s.Gauges {
+	mapCopy := make(map[string]models.Gauge, len(ms.Gauges))
+	for key, val := range ms.Gauges {
 		mapCopy[key] = val
 	}
 	return mapCopy
 }
 
-func (s *MemStorage) StoreCounterValue(key string, value models.Counter) {
-	s.mx.Lock()
-	defer s.mx.Unlock()
+func (ms *MemStorage) StoreCounterValue(key string, value models.Counter) {
+	ms.mx.Lock()
+	defer ms.mx.Unlock()
 
-	s.Counters[key] = value
+	ms.Counters[key] = value
 }
 
-func (s *MemStorage) GetCounterValue(key string) (models.Counter, error) {
-	s.mx.RLock()
-	defer s.mx.RUnlock()
+func (ms *MemStorage) GetCounterValue(key string) (models.Counter, error) {
+	ms.mx.RLock()
+	defer ms.mx.RUnlock()
 
 	var err error
-	val, ok := s.Counters[key]
+	val, ok := ms.Counters[key]
 	if !ok {
 		err = errors.New("can't set counter for unknown metric")
 	}
 	return val, err
 }
 
-func (s *MemStorage) GetAllCounters() map[string]models.Counter {
-	s.mx.RLock()
-	defer s.mx.RUnlock()
+func (ms *MemStorage) GetAllCounters() map[string]models.Counter {
+	ms.mx.RLock()
+	defer ms.mx.RUnlock()
 
-	mapCopy := make(map[string]models.Counter, len(s.Counters))
-	for key, val := range s.Counters {
+	mapCopy := make(map[string]models.Counter, len(ms.Counters))
+	for key, val := range ms.Counters {
 		mapCopy[key] = val
 	}
 	return mapCopy
