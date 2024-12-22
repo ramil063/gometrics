@@ -266,7 +266,6 @@ func TestFStorage_StoreGaugeValue(t *testing.T) {
 	type storage struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		key   string
@@ -282,7 +281,6 @@ func TestFStorage_StoreGaugeValue(t *testing.T) {
 			storage{
 				Gauges:   map[string]models.Gauge{"met1": 1.1},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				key:   "met1",
@@ -294,7 +292,7 @@ func TestFStorage_StoreGaugeValue(t *testing.T) {
 		s := &FStorage{
 			Gauges:   tt.s.Gauges,
 			Counters: tt.s.Counters,
-			mx:       tt.s.mx,
+			mx:       sync.RWMutex{},
 		}
 		s.StoreGaugeValue(tt.args.key, tt.args.value)
 		got, err := s.GetGaugeValue(tt.args.key)
@@ -307,7 +305,6 @@ func TestFStorage_GetGaugeValue(t *testing.T) {
 	type storage struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		key string
@@ -323,7 +320,6 @@ func TestFStorage_GetGaugeValue(t *testing.T) {
 			storage{
 				Gauges:   map[string]models.Gauge{"met1": 1.1},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				key: "met1",
@@ -336,7 +332,7 @@ func TestFStorage_GetGaugeValue(t *testing.T) {
 			s := &FStorage{
 				Gauges:   tt.s.Gauges,
 				Counters: tt.s.Counters,
-				mx:       tt.s.mx,
+				mx:       sync.RWMutex{},
 			}
 			s.StoreGaugeValue(tt.args.key, tt.want)
 			got, err := s.GetGaugeValue(tt.args.key)
@@ -350,7 +346,6 @@ func TestFStorage_GetAllGauges(t *testing.T) {
 	type storage struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		key   string
@@ -367,7 +362,6 @@ func TestFStorage_GetAllGauges(t *testing.T) {
 			storage{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				key:   "met1",
@@ -381,7 +375,7 @@ func TestFStorage_GetAllGauges(t *testing.T) {
 			s := &FStorage{
 				Gauges:   tt.s.Gauges,
 				Counters: tt.s.Counters,
-				mx:       tt.s.mx,
+				mx:       sync.RWMutex{},
 			}
 			s.StoreGaugeValue(tt.args.key, tt.args.value)
 			assert.Equalf(t, tt.want, s.GetAllGauges(), "GetAllGauges()")
@@ -393,7 +387,6 @@ func TestFStorage_StoreCounterValue(t *testing.T) {
 	type storage struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		key   string
@@ -409,7 +402,6 @@ func TestFStorage_StoreCounterValue(t *testing.T) {
 			storage{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				key:   "met1",
@@ -422,7 +414,7 @@ func TestFStorage_StoreCounterValue(t *testing.T) {
 			s := &FStorage{
 				Gauges:   tt.s.Gauges,
 				Counters: tt.s.Counters,
-				mx:       tt.s.mx,
+				mx:       sync.RWMutex{},
 			}
 			s.StoreCounterValue(tt.args.key, tt.args.value)
 			got, err := s.GetCounterValue(tt.args.key)
@@ -436,7 +428,6 @@ func TestFStorage_GetCounterValue(t *testing.T) {
 	type storage struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		key string
@@ -452,7 +443,6 @@ func TestFStorage_GetCounterValue(t *testing.T) {
 			storage{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				key: "met1",
@@ -465,7 +455,7 @@ func TestFStorage_GetCounterValue(t *testing.T) {
 			s := &FStorage{
 				Gauges:   tt.s.Gauges,
 				Counters: tt.s.Counters,
-				mx:       tt.s.mx,
+				mx:       sync.RWMutex{},
 			}
 			s.StoreCounterValue(tt.args.key, tt.want)
 			got, err := s.GetCounterValue(tt.args.key)
@@ -479,7 +469,6 @@ func TestFStorage_GetAllCounters(t *testing.T) {
 	type storage struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		key   string
@@ -496,7 +485,6 @@ func TestFStorage_GetAllCounters(t *testing.T) {
 			storage{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				key:   "met1",
@@ -510,7 +498,7 @@ func TestFStorage_GetAllCounters(t *testing.T) {
 			s := &FStorage{
 				Gauges:   tt.s.Gauges,
 				Counters: tt.s.Counters,
-				mx:       tt.s.mx,
+				mx:       sync.RWMutex{},
 			}
 			s.StoreCounterValue(tt.args.key, tt.args.value)
 			assert.Equalf(t, tt.want, s.GetAllCounters(), "GetAllCounters()")

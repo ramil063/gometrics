@@ -94,7 +94,6 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 	type storage struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		key   string
@@ -111,7 +110,6 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 			storage{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				key:   "met1",
@@ -125,7 +123,7 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 			s := &MemStorage{
 				Gauges:   tt.s.Gauges,
 				Counters: tt.s.Counters,
-				mx:       tt.s.mx,
+				mx:       sync.RWMutex{},
 			}
 			s.StoreCounterValue(tt.args.key, tt.args.value)
 			assert.Equalf(t, tt.want, s.GetAllCounters(), "GetAllCounters()")
@@ -137,7 +135,6 @@ func TestMemStorage_GetAllGauges(t *testing.T) {
 	type storage struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		key   string
@@ -154,7 +151,6 @@ func TestMemStorage_GetAllGauges(t *testing.T) {
 			storage{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				key:   "met1",
@@ -168,7 +164,7 @@ func TestMemStorage_GetAllGauges(t *testing.T) {
 			s := &MemStorage{
 				Gauges:   tt.s.Gauges,
 				Counters: tt.s.Counters,
-				mx:       tt.s.mx,
+				mx:       sync.RWMutex{},
 			}
 			s.StoreGaugeValue(tt.args.key, tt.args.value)
 			assert.Equalf(t, tt.want, s.GetAllGauges(), "GetAllGauges()")
@@ -180,7 +176,6 @@ func TestMemStorage_GetCounter(t *testing.T) {
 	type fields struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		name  string
@@ -197,7 +192,6 @@ func TestMemStorage_GetCounter(t *testing.T) {
 			fields{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				name:  "met1",
@@ -211,7 +205,7 @@ func TestMemStorage_GetCounter(t *testing.T) {
 			ms := &MemStorage{
 				Gauges:   tt.fields.Gauges,
 				Counters: tt.fields.Counters,
-				mx:       tt.fields.mx,
+				mx:       sync.RWMutex{},
 			}
 			err := ms.AddCounter(tt.args.name, tt.args.value)
 			assert.NoError(t, err)
@@ -226,7 +220,6 @@ func TestMemStorage_GetCounterValue(t *testing.T) {
 	type storage struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		key   string
@@ -243,7 +236,6 @@ func TestMemStorage_GetCounterValue(t *testing.T) {
 			storage{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				key:   "met1",
@@ -257,7 +249,7 @@ func TestMemStorage_GetCounterValue(t *testing.T) {
 			s := &MemStorage{
 				Gauges:   tt.s.Gauges,
 				Counters: tt.s.Counters,
-				mx:       tt.s.mx,
+				mx:       sync.RWMutex{},
 			}
 			s.StoreCounterValue(tt.args.key, tt.args.value)
 			got, err := s.GetCounterValue(tt.args.key)
@@ -271,7 +263,6 @@ func TestMemStorage_GetCounters(t *testing.T) {
 	type fields struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		key   string
@@ -288,7 +279,6 @@ func TestMemStorage_GetCounters(t *testing.T) {
 			fields{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				key:   "met1",
@@ -302,7 +292,7 @@ func TestMemStorage_GetCounters(t *testing.T) {
 			ms := &MemStorage{
 				Gauges:   tt.fields.Gauges,
 				Counters: tt.fields.Counters,
-				mx:       tt.fields.mx,
+				mx:       sync.RWMutex{},
 			}
 			err := ms.AddCounter(tt.args.key, tt.args.value)
 			assert.NoError(t, err)
@@ -317,7 +307,6 @@ func TestMemStorage_GetGauge(t *testing.T) {
 	type fields struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		name  string
@@ -334,7 +323,6 @@ func TestMemStorage_GetGauge(t *testing.T) {
 			fields{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				name:  "met1",
@@ -348,7 +336,7 @@ func TestMemStorage_GetGauge(t *testing.T) {
 			ms := &MemStorage{
 				Gauges:   tt.fields.Gauges,
 				Counters: tt.fields.Counters,
-				mx:       tt.fields.mx,
+				mx:       sync.RWMutex{},
 			}
 			err := ms.SetGauge(tt.args.name, tt.args.value)
 			assert.NoError(t, err)
@@ -363,7 +351,6 @@ func TestMemStorage_GetGaugeValue(t *testing.T) {
 	type storage struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		key string
@@ -379,7 +366,6 @@ func TestMemStorage_GetGaugeValue(t *testing.T) {
 			storage{
 				Gauges:   map[string]models.Gauge{"met1": 1.1},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				key: "met1",
@@ -392,7 +378,7 @@ func TestMemStorage_GetGaugeValue(t *testing.T) {
 			s := &MemStorage{
 				Gauges:   tt.s.Gauges,
 				Counters: tt.s.Counters,
-				mx:       tt.s.mx,
+				mx:       sync.RWMutex{},
 			}
 			got, err := s.GetGaugeValue(tt.args.key)
 			assert.NoError(t, err)
@@ -405,7 +391,6 @@ func TestMemStorage_GetGauges(t *testing.T) {
 	type fields struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	tests := []struct {
 		name string
@@ -417,7 +402,6 @@ func TestMemStorage_GetGauges(t *testing.T) {
 			fields{
 				Gauges:   map[string]models.Gauge{"met1": 1.1},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			map[string]models.Gauge{"met1": 1.1},
 		},
@@ -427,7 +411,7 @@ func TestMemStorage_GetGauges(t *testing.T) {
 			ms := &MemStorage{
 				Gauges:   tt.f.Gauges,
 				Counters: tt.f.Counters,
-				mx:       tt.f.mx,
+				mx:       sync.RWMutex{},
 			}
 			got, err := ms.GetGauges()
 			assert.NoError(t, err)
@@ -440,7 +424,6 @@ func TestMemStorage_StoreCounterValue(t *testing.T) {
 	type storage struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		key   string
@@ -456,7 +439,6 @@ func TestMemStorage_StoreCounterValue(t *testing.T) {
 			storage{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				key:   "met1",
@@ -469,7 +451,7 @@ func TestMemStorage_StoreCounterValue(t *testing.T) {
 			s := &MemStorage{
 				Gauges:   tt.s.Gauges,
 				Counters: tt.s.Counters,
-				mx:       tt.s.mx,
+				mx:       sync.RWMutex{},
 			}
 			s.StoreCounterValue(tt.args.key, tt.args.value)
 			got, err := s.GetCounterValue(tt.args.key)
@@ -483,7 +465,6 @@ func TestMemStorage_StoreGaugeValue(t *testing.T) {
 	type storage struct {
 		Gauges   map[string]models.Gauge
 		Counters map[string]models.Counter
-		mx       sync.RWMutex
 	}
 	type args struct {
 		key   string
@@ -499,7 +480,6 @@ func TestMemStorage_StoreGaugeValue(t *testing.T) {
 			storage{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
-				mx:       sync.RWMutex{},
 			},
 			args{
 				key:   "met1",
@@ -512,7 +492,7 @@ func TestMemStorage_StoreGaugeValue(t *testing.T) {
 			s := &MemStorage{
 				Gauges:   tt.s.Gauges,
 				Counters: tt.s.Counters,
-				mx:       tt.s.mx,
+				mx:       sync.RWMutex{},
 			}
 			s.StoreGaugeValue(tt.args.key, tt.args.value)
 			got, err := s.GetGaugeValue(tt.args.key)
