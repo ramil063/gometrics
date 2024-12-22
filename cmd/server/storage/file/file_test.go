@@ -12,48 +12,45 @@ import (
 )
 
 func TestFStorage_AddCounter(t *testing.T) {
-	var f = FStorage{
-		Gauges:   map[string]models.Gauge{},
-		Counters: map[string]models.Counter{"met1": 1},
-	}
-
 	handlers.FileStoragePath = "../../../../internal/storage/files/test.json"
-	_, _ = NewReader(handlers.FileStoragePath)
 
-	Writer, err := NewWriter(handlers.FileStoragePath)
-	if err != nil {
-		logger.WriteErrorLog("error create metrics writer", err.Error())
+	type storage struct {
+		Gauges   map[string]models.Gauge
+		Counters map[string]models.Counter
 	}
-	defer Writer.Close()
-
-	err = Writer.WriteMetrics(&f)
-	if err != nil {
-		logger.WriteErrorLog("error write metrics", err.Error())
-	}
-
 	type args struct {
 		name  string
 		value models.Counter
 	}
 	tests := []struct {
-		name   string
-		fields FStorage
-		args   args
+		name string
+		storage
+		args args
 	}{
-		{"test 1", f, args{name: "met1", value: 1}},
+		{
+			"test 1",
+			storage{
+				Gauges:   map[string]models.Gauge{},
+				Counters: map[string]models.Counter{"met1": 1},
+			},
+			args{
+				name:  "met1",
+				value: 1,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &FStorage{
-				Gauges:   tt.fields.Gauges,
-				Counters: tt.fields.Counters,
+				Gauges:   tt.storage.Gauges,
+				Counters: tt.storage.Counters,
 				mx:       sync.RWMutex{},
 			}
-			err = s.AddCounter(tt.args.name, tt.args.value)
+			err := s.AddCounter(tt.args.name, tt.args.value)
 			assert.NoError(t, err)
 			got, err := s.GetCounter(tt.args.name)
 			assert.NoError(t, err)
-			assert.Equal(t, int64(tt.fields.Counters[tt.args.name]+tt.args.value), got)
+			assert.Equal(t, got+int64(tt.args.value), got+int64(tt.storage.Counters[tt.args.name]))
 		})
 	}
 }
@@ -79,18 +76,17 @@ func TestFStorage_GetCounter(t *testing.T) {
 		name string
 	}
 	tests := []struct {
-		name   string
-		fields FStorage
-		args   args
-		want   int64
+		name string
+		args args
+		want int64
 	}{
-		{"test 1", f, args{name: "met1"}, 1},
+		{"test 1", args{name: "met1"}, 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &FStorage{
-				Gauges:   tt.fields.Gauges,
-				Counters: tt.fields.Counters,
+				Gauges:   f.Gauges,
+				Counters: f.Counters,
 				mx:       sync.RWMutex{},
 			}
 			got, err := s.GetCounter(tt.args.name)
@@ -118,17 +114,16 @@ func TestFStorage_GetCounters(t *testing.T) {
 		logger.WriteErrorLog("error write metrics", err.Error())
 	}
 	tests := []struct {
-		name   string
-		fields FStorage
-		want   map[string]models.Counter
+		name string
+		want map[string]models.Counter
 	}{
-		{"test 1", f, map[string]models.Counter{"met1": 1}},
+		{"test 1", map[string]models.Counter{"met1": 1}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &FStorage{
-				Gauges:   tt.fields.Gauges,
-				Counters: tt.fields.Counters,
+				Gauges:   f.Gauges,
+				Counters: f.Counters,
 				mx:       sync.RWMutex{},
 			}
 			got, err := s.GetCounters()
@@ -159,18 +154,17 @@ func TestFStorage_GetGauge(t *testing.T) {
 		name string
 	}
 	tests := []struct {
-		name   string
-		fields FStorage
-		args   args
-		want   float64
+		name string
+		args args
+		want float64
 	}{
-		{"test 1", f, args{name: "met1"}, 1.1},
+		{"test 1", args{name: "met1"}, 1.1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &FStorage{
-				Gauges:   tt.fields.Gauges,
-				Counters: tt.fields.Counters,
+				Gauges:   f.Gauges,
+				Counters: f.Counters,
 				mx:       sync.RWMutex{},
 			}
 			got, err := s.GetGauge(tt.args.name)
@@ -198,17 +192,16 @@ func TestFStorage_GetGauges(t *testing.T) {
 		logger.WriteErrorLog("error write metrics", err.Error())
 	}
 	tests := []struct {
-		name   string
-		fields FStorage
-		want   map[string]models.Gauge
+		name string
+		want map[string]models.Gauge
 	}{
-		{"test 1", f, map[string]models.Gauge{"met1": 1.1}},
+		{"test 1", map[string]models.Gauge{"met1": 1.1}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &FStorage{
-				Gauges:   tt.fields.Gauges,
-				Counters: tt.fields.Counters,
+				Gauges:   f.Gauges,
+				Counters: f.Counters,
 				mx:       sync.RWMutex{},
 			}
 			got, err := s.GetGauges()
@@ -240,18 +233,17 @@ func TestFStorage_SetGauge(t *testing.T) {
 		value models.Gauge
 	}
 	tests := []struct {
-		name   string
-		fields FStorage
-		args   args
-		want   map[string]models.Gauge
+		name string
+		args args
+		want map[string]models.Gauge
 	}{
-		{"test 1", f, args{name: "met1", value: 1.1}, map[string]models.Gauge{"met1": 1.1}},
+		{"test 1", args{name: "met1", value: 1.1}, map[string]models.Gauge{"met1": 1.1}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &FStorage{
-				Gauges:   tt.fields.Gauges,
-				Counters: tt.fields.Counters,
+				Gauges:   f.Gauges,
+				Counters: f.Counters,
 			}
 			err = s.SetGauge(tt.args.name, tt.args.value)
 			assert.NoError(t, err)
