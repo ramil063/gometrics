@@ -15,9 +15,9 @@ func TestStorage_AddCounter(t *testing.T) {
 	dml.DBRepository.Database, mock, _ = sqlmock.New()
 	defer dml.DBRepository.Database.Close()
 
-	rows := sqlmock.NewRows([]string{"name"}).AddRow("1")
-	mock.ExpectQuery("^SELECT name FROM counter WHERE name = *").WithArgs("metric1").WillReturnRows(rows)
-	mock.ExpectExec("^UPDATE counter SET value = *").WithArgs(int64(1), "metric1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectExec("^INSERT INTO counter *").
+		WithArgs("metric1", int64(1)).
+		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	type args struct {
 		name  string
@@ -49,9 +49,9 @@ func TestStorage_SetGauge(t *testing.T) {
 	dml.DBRepository.Database, mock, _ = sqlmock.New()
 	defer dml.DBRepository.Database.Close()
 
-	rows := sqlmock.NewRows([]string{"name"}).AddRow("1")
-	mock.ExpectQuery("^SELECT name FROM gauge WHERE name = *").WithArgs("metric1").WillReturnRows(rows)
-	mock.ExpectExec("^UPDATE gauge SET value = *").WithArgs(float64(1), "metric1").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectExec("^INSERT INTO gauge *").
+		WithArgs("metric1", float64(1)).
+		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	type args struct {
 		name  string

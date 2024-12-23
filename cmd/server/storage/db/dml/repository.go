@@ -125,31 +125,15 @@ func NewRepository() (*Repository, error) {
 }
 
 func CreateOrUpdateCounter(dbr *Repository, name string, value models.Counter) (sql.Result, error) {
-	var err error
-	row := dbr.QueryRowContext(context.Background(), "SELECT name FROM counter WHERE name = $1", name)
-
-	if row.Err() != nil {
-		logger.WriteErrorLog("AddCounter database query error", row.Err().Error())
-	}
-	var selectedName string
-	_ = row.Scan(&selectedName)
-
-	if selectedName != "" {
-		exec, err := dbr.ExecContext(
-			context.Background(),
-			"UPDATE counter SET value = $1 + value WHERE name = $2",
-			int64(value),
-			name)
-		if err != nil {
-			return nil, internalErrors.NewDBError(err)
-		}
-		return exec, nil
-	}
 	exec, err := dbr.ExecContext(
 		context.Background(),
-		"INSERT INTO counter (name, value) VALUES ($1, $2)",
+		"INSERT INTO counter (name, value) VALUES ($1, $2) "+
+			"ON CONFLICT (name) "+
+			"DO UPDATE SET value = $2 + counter.value "+
+			"WHERE counter.name = $1",
 		name,
-		float64(value))
+		int64(value))
+
 	if err != nil {
 		return nil, internalErrors.NewDBError(err)
 	}
@@ -157,30 +141,12 @@ func CreateOrUpdateCounter(dbr *Repository, name string, value models.Counter) (
 }
 
 func CreateOrUpdateGauge(dbr *Repository, name string, value models.Gauge) (sql.Result, error) {
-	var result sql.Result
-
-	row := dbr.QueryRowContext(context.Background(), "SELECT name FROM gauge WHERE name = $1", name)
-
-	if row.Err() != nil {
-		return result, internalErrors.NewDBError(row.Err())
-	}
-	var selectedName string
-	_ = row.Scan(&selectedName)
-
-	if selectedName != "" {
-		exec, err := dbr.ExecContext(
-			context.Background(),
-			"UPDATE gauge SET value = $1 WHERE name = $2",
-			float64(value),
-			name)
-		if err != nil {
-			return nil, internalErrors.NewDBError(err)
-		}
-		return exec, nil
-	}
 	exec, err := dbr.ExecContext(
 		context.Background(),
-		"INSERT INTO gauge (name, value) VALUES ($1, $2)",
+		"INSERT INTO gauge (name, value) VALUES ($1, $2) "+
+			"ON CONFLICT (name) "+
+			"DO UPDATE SET value = $2 "+
+			"WHERE gauge.name = $1",
 		name,
 		float64(value))
 	if err != nil {
