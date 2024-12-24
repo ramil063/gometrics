@@ -249,6 +249,7 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) error {
 				var reqErr *internalErrors.RequestError
 				if errors.Is(err, reqErr) || errors.Is(err, syscall.ECONNREFUSED) {
 					err = retryToSendMetrics(c, url, body, internalErrors.TriesTimes)
+					return err
 				}
 			}
 		}
