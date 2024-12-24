@@ -201,9 +201,10 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) error {
 	count := 0
 	seconds := 0
 	var m storage.Monitor
+	var err error
 	url := "http://" + MainURL + "/updates"
 
-	for seconds < maxCount {
+	for maxCount < 0 || seconds < maxCount {
 		<-time.After(interval)
 		seconds++
 		if (seconds % PollInterval) == 0 {
@@ -243,25 +244,27 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) error {
 				logger.WriteErrorLog("Error marshal metrics", err.Error())
 			}
 
-			if err := c.SendPostRequestWithBody(url, body); err != nil {
+			if err = c.SendPostRequestWithBody(url, body); err != nil {
 				logger.WriteErrorLog("Error in request", err.Error())
 				var reqErr *internalErrors.RequestError
 				if errors.Is(err, reqErr) || errors.Is(err, syscall.ECONNREFUSED) {
-					retryToSendMetrics(c, url, body, internalErrors.TriesTimes)
+					err = retryToSendMetrics(c, url, body, internalErrors.TriesTimes)
 				}
 			}
 		}
 	}
-	return nil
+	return err
 }
 
-func retryToSendMetrics(c JSONClienter, url string, body []byte, tries []int) {
+func retryToSendMetrics(c JSONClienter, url string, body []byte, tries []int) error {
+	var err error
 	for try := 0; try < len(tries); try++ {
 		time.Sleep(time.Duration(tries[try]) * time.Second)
-		err := c.SendPostRequestWithBody(url, body)
+		err = c.SendPostRequestWithBody(url, body)
 		if err == nil {
 			break
 		}
 		logger.WriteErrorLog("Error in request by try:"+strconv.Itoa(try), err.Error())
 	}
+	return err
 }

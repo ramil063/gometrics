@@ -10,7 +10,7 @@ func main() {
 	handlers.ParseFlags()
 	c := handlers.NewJSONClient()
 	r := handlers.NewRequest()
-	var err = r.SendMultipleMetricsJSON(c, 100)
+	var err = r.SendMultipleMetricsJSON(c, -1)
 	if err != nil {
 		log.Fatal(err)
 	}
