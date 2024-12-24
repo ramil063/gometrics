@@ -38,12 +38,10 @@ func main() {
 			return
 		}
 	}
-	if handlers.Restore {
+
+	if handlers.Restore && handlers.StoreInterval > 0 {
 		ticker := time.NewTicker(time.Duration(handlers.StoreInterval) * time.Second)
 		go func() {
-			if handlers.StoreInterval == 0 {
-				return
-			}
 			server.SaveMetricsPerTime(server.MaxSaverWorkTime, ticker, s)
 		}()
 	}
