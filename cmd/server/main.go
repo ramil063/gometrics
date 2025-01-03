@@ -10,6 +10,7 @@ import (
 	"github.com/ramil063/gometrics/cmd/server/handlers/server"
 	"github.com/ramil063/gometrics/cmd/server/storage/db"
 	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
+	"github.com/ramil063/gometrics/cmd/server/storage/file"
 	"github.com/ramil063/gometrics/internal/logger"
 )
 
@@ -22,7 +23,7 @@ func main() {
 
 	logger.WriteInfoLog("--------------START SERVER-------------", "")
 
-	var s = server.GetStorage(handlers.Restore, handlers.DatabaseDSN)
+	var s = server.GetStorage(handlers.FileStoragePath, handlers.DatabaseDSN)
 
 	if handlers.DatabaseDSN != "" {
 		rep, err := dml.NewRepository()
@@ -39,7 +40,15 @@ func main() {
 		}
 	}
 
-	if handlers.Restore && handlers.StoreInterval > 0 {
+	writingToFileIsEnabledAndAvailable := handlers.FileStoragePath != ""
+	if handlers.StoreInterval > 0 && writingToFileIsEnabledAndAvailable {
+		if !handlers.Restore {
+			// работаем с новыми метриками, очищая файл со старыми
+			err = file.ClearFileContent(handlers.FileStoragePath)
+			if err != nil {
+				logger.WriteErrorLog(err.Error(), "ClearFileContent")
+			}
+		}
 		ticker := time.NewTicker(time.Duration(handlers.StoreInterval) * time.Second)
 		go func() {
 			server.SaveMetricsPerTime(server.MaxSaverWorkTime, ticker, s)

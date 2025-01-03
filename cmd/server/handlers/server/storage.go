@@ -26,11 +26,11 @@ func NewDBStorage() Storager {
 }
 
 // GetStorage получить хранителя данных
-func GetStorage(restore bool, dsn string) Storager {
+func GetStorage(fileStoragePath string, dsn string) Storager {
 	if dsn != "" {
 		return NewDBStorage()
 	}
-	if restore {
+	if fileStoragePath != "" {
 		return NewFileStorage()
 	}
 	return NewMemStorage()
