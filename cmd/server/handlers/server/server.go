@@ -105,12 +105,16 @@ func update(rw http.ResponseWriter, r *http.Request, ms Storager) {
 		err := ms.SetGauge(metricName, models.Gauge(value))
 		if err != nil {
 			logger.WriteErrorLog(err.Error(), "Gauge")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	case "counter":
 		value, _ := strconv.ParseInt(metricValue, 10, 64)
 		err := ms.AddCounter(metricName, models.Counter(value))
 		if err != nil {
 			logger.WriteErrorLog(err.Error(), "Counter")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	}
 	_, err := io.WriteString(rw, "")
@@ -166,6 +170,8 @@ func home(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	gauges, err := ms.GetGauges()
 	if err != nil {
 		logger.WriteErrorLog(err.Error(), "Gauge")
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	for key, g := range gauges {
 		str := strconv.FormatFloat(float64(g), 'f', -1, 64)
@@ -175,6 +181,8 @@ func home(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	counters, err := ms.GetCounters()
 	if err != nil {
 		logger.WriteErrorLog(err.Error(), "GetCounters")
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	for key, c := range counters {
 		str := strconv.FormatInt(int64(c), 10)
@@ -216,8 +224,6 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 	}
 
 	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
-	rw.Header().Set("Content-Type", "application/json")
 
 	logMsg, _ := json.Marshal(metrics)
 	logger.WriteInfoLog("request body in update/", string(logMsg))
@@ -227,18 +233,26 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 		err := s.SetGauge(metrics.ID, models.Gauge(*metrics.Value))
 		if err != nil {
 			logger.WriteErrorLog(err.Error(), "SetGauge")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	case "counter":
 		err := s.AddCounter(metrics.ID, models.Counter(*metrics.Delta))
 		if err != nil {
 			logger.WriteErrorLog(err.Error(), "AddCounter")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		newCounter, err := s.GetCounter(metrics.ID)
 		if err != nil {
 			logger.WriteDebugLog(err.Error(), "GetCounter")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		metrics.Delta = &newCounter
 	}
+	rw.WriteHeader(http.StatusOK)
+	rw.Header().Set("Content-Type", "application/json")
 
 	enc := json.NewEncoder(rw)
 	if err := enc.Encode(metrics); err != nil {
@@ -263,8 +277,6 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 	logger.WriteInfoLog("request body in value/", "metrics{ID, MType}"+metrics.ID+","+metrics.MType)
 
 	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
-	rw.Header().Set("Content-Type", "application/json")
 
 	switch metrics.MType {
 	case "gauge":
@@ -274,6 +286,8 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 			err = s.SetGauge(metrics.ID, 0)
 			if err != nil {
 				logger.WriteInfoLog(err.Error(), "SetGauge ID:"+metrics.ID)
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			value = 0
 		}
@@ -282,16 +296,29 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 		err := s.AddCounter(metrics.ID, models.Counter(0))
 		if err != nil {
 			logger.WriteInfoLog(err.Error(), "AddCounter ID:"+metrics.ID)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		delta, err := s.GetCounter(metrics.ID)
 		if err != nil {
 			logger.WriteInfoLog(err.Error(), "GetCounter ID:"+metrics.ID)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		metrics.Delta = &delta
 	}
 
 	m := agentStorage.NewMonitor()
-	PrepareMetricsValues(s, m)
+	err := PrepareMetricsValues(s, m)
+
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "PrepareMetricsValues getValueMetricsJSON")
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	rw.Header().Set("Content-Type", "application/json")
 
 	enc := json.NewEncoder(rw)
 	if err := enc.Encode(metrics); err != nil {
@@ -346,6 +373,8 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 			err = dbs.SetGauge(m.ID, models.Gauge(*m.Value))
 			if err != nil {
 				logger.WriteErrorLog(err.Error(), "SetGauge ID:"+m.ID)
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			result[i].Value = m.Value
 		case "counter":
@@ -356,10 +385,14 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 			err = dbs.AddCounter(m.ID, models.Counter(*m.Delta))
 			if err != nil {
 				logger.WriteErrorLog(err.Error(), "AddCounter ID:"+m.ID)
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			newCounter, err := dbs.GetCounter(m.ID)
 			if err != nil {
 				logger.WriteErrorLog(err.Error(), "GetCounter ID:"+m.ID)
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			result[i].Delta = &newCounter
 		}

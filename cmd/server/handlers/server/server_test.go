@@ -293,8 +293,16 @@ func Test_getValueMetricsJSON(t *testing.T) {
 }
 
 func Test_updates(t *testing.T) {
-	dml.DBRepository.Database, _, _ = sqlmock.New()
+	var mock sqlmock.Sqlmock
+	dml.DBRepository.Database, mock, _ = sqlmock.New()
 	defer dml.DBRepository.Database.Close()
+
+	mock.ExpectExec("^INSERT INTO gauge *").
+		WithArgs("met1", float64(1.1)).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectExec("^INSERT INTO gauge *").
+		WithArgs("met2", float64(2.2)).
+		WillReturnResult(sqlmock.NewResult(2, 1))
 
 	updatesHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
 		s := &db.Storage{}
@@ -320,9 +328,9 @@ func Test_updates(t *testing.T) {
 		{
 			name:         "test 2",
 			method:       http.MethodPost,
-			body:         `[{"id": "met1", "type": "gauge", "value":1.1}, {"id": "met2", "type": "gauge", "value":2.2}]`,
+			body:         `[{"id": "met1", "type": "gauge", "value":1.1},{"id": "met2", "type": "gauge", "value":2.2}]`,
 			expectedCode: http.StatusOK,
-			expectedBody: `[{"id": "met1", "type": "gauge", "value":1.1}, {"id": "met2", "type": "gauge", "value":2.2}]`,
+			expectedBody: `[{"id": "met1", "type": "gauge", "value":1.1},{"id": "met2", "type": "gauge", "value":2.2}]`,
 		},
 	}
 	for _, tc := range testCases {
