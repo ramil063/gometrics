@@ -11,7 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ramil063/gometrics/cmd/server/handlers"
+	"github.com/ramil063/gometrics/cmd/server/storage/db"
+	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 )
 
 func Test_update(t *testing.T) {
@@ -105,7 +108,8 @@ func Test_getValue(t *testing.T) {
 	}
 	for _, test := range testsG {
 		t.Run(test.name, func(t *testing.T) {
-			ms.SetGauge("a", 1.1)
+			err := ms.SetGauge("a", 1.1)
+			assert.NoError(t, err)
 			resp, _ := testRequest(t, ts, "GET", test.url)
 			defer resp.Body.Close()
 			assert.Equal(t, test.want.code, resp.StatusCode)
@@ -122,7 +126,8 @@ func Test_getValue(t *testing.T) {
 	}
 	for _, test := range testsC {
 		t.Run(test.name, func(t *testing.T) {
-			ms.AddCounter("a", 1)
+			err := ms.AddCounter("a", 1)
+			assert.NoError(t, err)
 			resp, _ := testRequest(t, ts, "GET", test.url)
 			defer resp.Body.Close()
 			assert.Equal(t, test.want.code, resp.StatusCode)
@@ -150,7 +155,8 @@ func Test_home(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ms.SetGauge("a", 1.1)
+			err := ms.SetGauge("a", 1.1)
+			assert.NoError(t, err)
 			resp, _ := testRequest(t, ts, "GET", test.url)
 			defer resp.Body.Close()
 			assert.Equal(t, test.want.code, resp.StatusCode)
@@ -233,8 +239,8 @@ func Test_getValueMetricsJSON(t *testing.T) {
 
 	handlers.FileStoragePath = filePath
 	getValueMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-		s := GetStorage(false)
-		s.SetGauge("met1", 1.1)
+		s := GetStorage("", "")
+		_ = s.SetGauge("met1", 1.1)
 		getValueMetricsJSON(rw, req, s)
 	}
 	handler := http.HandlerFunc(getValueMetricsJSONHandlerFunction)
@@ -263,6 +269,70 @@ func Test_getValueMetricsJSON(t *testing.T) {
 		},
 	}
 
+	for _, tc := range testCases {
+		t.Run(tc.method, func(t *testing.T) {
+			req := resty.New().R()
+			req.Method = tc.method
+			req.URL = srv.URL
+
+			if len(tc.body) > 0 {
+				req.SetHeader("Content-Type", "application/json")
+				req.SetBody(tc.body)
+			}
+
+			resp, err := req.Send()
+			assert.NoError(t, err, "error making HTTP request")
+
+			assert.Equal(t, tc.expectedCode, resp.StatusCode(), "Response code didn't match expected")
+			// проверяем корректность полученного тела ответа, если мы его ожидаем
+			if tc.expectedBody != "" {
+				assert.JSONEq(t, tc.expectedBody, string(resp.Body()))
+			}
+		})
+	}
+}
+
+func Test_updates(t *testing.T) {
+	var mock sqlmock.Sqlmock
+	dml.DBRepository.Database, mock, _ = sqlmock.New()
+	defer dml.DBRepository.Database.Close()
+
+	mock.ExpectExec("^INSERT INTO gauge *").
+		WithArgs("met1", float64(1.1)).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectExec("^INSERT INTO gauge *").
+		WithArgs("met2", float64(2.2)).
+		WillReturnResult(sqlmock.NewResult(2, 1))
+
+	updatesHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
+		s := &db.Storage{}
+		updates(rw, req, s)
+	}
+	handler := http.HandlerFunc(updatesHandlerFunction)
+	srv := httptest.NewServer(handler)
+	defer srv.Close()
+
+	testCases := []struct {
+		name         string // добавляем название тестов
+		method       string
+		body         string // добавляем тело запроса в табличные тесты
+		expectedCode int
+		expectedBody string
+	}{
+		{
+			name:         "test 1",
+			method:       http.MethodPost,
+			expectedCode: http.StatusInternalServerError,
+			expectedBody: "",
+		},
+		{
+			name:         "test 2",
+			method:       http.MethodPost,
+			body:         `[{"id": "met1", "type": "gauge", "value":1.1},{"id": "met2", "type": "gauge", "value":2.2}]`,
+			expectedCode: http.StatusOK,
+			expectedBody: `[{"id": "met1", "type": "gauge", "value":1.1},{"id": "met2", "type": "gauge", "value":2.2}]`,
+		},
+	}
 	for _, tc := range testCases {
 		t.Run(tc.method, func(t *testing.T) {
 			req := resty.New().R()

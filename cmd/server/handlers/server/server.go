@@ -11,6 +11,8 @@ import (
 
 	agentStorage "github.com/ramil063/gometrics/cmd/agent/storage"
 	"github.com/ramil063/gometrics/cmd/server/handlers/middlewares"
+	"github.com/ramil063/gometrics/cmd/server/storage/db"
+	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
@@ -18,15 +20,15 @@ import (
 var MaxSaverWorkTime = 900000
 
 type Gauger interface {
-	SetGauge(name string, value models.Gauge)
-	GetGauge(name string) (float64, bool)
-	GetGauges() map[string]models.Gauge
+	SetGauge(name string, value models.Gauge) error
+	GetGauge(name string) (float64, error)
+	GetGauges() (map[string]models.Gauge, error)
 }
 
 type Counterer interface {
-	AddCounter(name string, value models.Counter)
-	GetCounter(name string) (int64, bool)
-	GetCounters() map[string]models.Counter
+	AddCounter(name string, value models.Counter) error
+	GetCounter(name string) (int64, error)
+	GetCounters() (map[string]models.Counter, error)
 }
 
 type Storager interface {
@@ -47,6 +49,15 @@ func Router(s Storager) chi.Router {
 		home(rw, r, s)
 	}
 	r.Get("/", homeHandlerFunction)
+
+	r.Get("/ping", ping)
+
+	r.Route("/updates", func(r chi.Router) {
+		updatesHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
+			updates(rw, r, s)
+		}
+		r.With(middlewares.CheckPostMethodMw).Post("/", updatesHandlerFunction)
+	})
 
 	r.Route("/update", func(r chi.Router) {
 		r.Route("/{type}/{metric}", func(r chi.Router) {
@@ -91,10 +102,20 @@ func update(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	switch metricType {
 	case "gauge":
 		value, _ := strconv.ParseFloat(metricValue, 64)
-		ms.SetGauge(metricName, models.Gauge(value))
+		err := ms.SetGauge(metricName, models.Gauge(value))
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "Gauge")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	case "counter":
 		value, _ := strconv.ParseInt(metricValue, 10, 64)
-		ms.AddCounter(metricName, models.Counter(value))
+		err := ms.AddCounter(metricName, models.Counter(value))
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "Counter")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 	_, err := io.WriteString(rw, "")
 	if err != nil {
@@ -107,11 +128,10 @@ func getValue(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	metricType := r.PathValue("type")
 	metricName := r.PathValue("metric")
 
-	var err error
 	switch metricType {
 	case "gauge":
-		value, ok := ms.GetGauge(metricName)
-		if !ok {
+		value, err := ms.GetGauge(metricName)
+		if err != nil {
 			log.Println("Error value of gauge is not Ok")
 			rw.WriteHeader(http.StatusNotFound)
 			return
@@ -120,9 +140,12 @@ func getValue(rw http.ResponseWriter, r *http.Request, ms Storager) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Header().Set("Content-Type", "text/plain")
 		_, err = io.WriteString(rw, strconv.FormatFloat(value, 'f', -1, 64))
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "Gauge")
+		}
 	case "counter":
-		value, ok := ms.GetCounter(metricName)
-		if !ok {
+		value, err := ms.GetCounter(metricName)
+		if err != nil {
 			log.Println("Error value of counter is not Ok")
 			rw.WriteHeader(http.StatusNotFound)
 			return
@@ -131,9 +154,9 @@ func getValue(rw http.ResponseWriter, r *http.Request, ms Storager) {
 		rw.WriteHeader(http.StatusOK)
 		rw.Header().Set("Content-Type", "text/plain")
 		_, err = io.WriteString(rw, strconv.FormatInt(value, 10))
-	}
-	if err != nil {
-		return
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "Counter")
+		}
 	}
 }
 
@@ -144,17 +167,29 @@ func home(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	rw.Header().Set("Content-Type", "text/html")
 
 	bodyGauge := ""
-	for key, g := range ms.GetGauges() {
+	gauges, err := ms.GetGauges()
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "Gauge")
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	for key, g := range gauges {
 		str := strconv.FormatFloat(float64(g), 'f', -1, 64)
 		bodyGauge += `<div>` + key + `-` + str + `</div>`
 	}
 	bodyCounters := ""
-	for key, c := range ms.GetCounters() {
+	counters, err := ms.GetCounters()
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "GetCounters")
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	for key, c := range counters {
 		str := strconv.FormatInt(int64(c), 10)
 		bodyCounters += `<div>` + key + `-` + str + `</div>`
 	}
 
-	_, err := io.WriteString(rw, `
+	_, err = io.WriteString(rw, `
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -170,6 +205,7 @@ func home(rw http.ResponseWriter, r *http.Request, ms Storager) {
 </html>
 `)
 	if err != nil {
+		logger.WriteErrorLog(err.Error(), "WriteString")
 		return
 	}
 }
@@ -188,20 +224,35 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 	}
 
 	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
-	rw.Header().Set("Content-Type", "application/json")
 
 	logMsg, _ := json.Marshal(metrics)
 	logger.WriteInfoLog("request body in update/", string(logMsg))
 
 	switch metrics.MType {
 	case "gauge":
-		s.SetGauge(metrics.ID, models.Gauge(*metrics.Value))
+		err := s.SetGauge(metrics.ID, models.Gauge(*metrics.Value))
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "SetGauge")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	case "counter":
-		s.AddCounter(metrics.ID, models.Counter(*metrics.Delta))
-		newCounter, _ := s.GetCounter(metrics.ID)
+		err := s.AddCounter(metrics.ID, models.Counter(*metrics.Delta))
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "AddCounter")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		newCounter, err := s.GetCounter(metrics.ID)
+		if err != nil {
+			logger.WriteDebugLog(err.Error(), "GetCounter")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		metrics.Delta = &newCounter
 	}
+	rw.WriteHeader(http.StatusOK)
+	rw.Header().Set("Content-Type", "application/json")
 
 	enc := json.NewEncoder(rw)
 	if err := enc.Encode(metrics); err != nil {
@@ -226,34 +277,135 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 	logger.WriteInfoLog("request body in value/", "metrics{ID, MType}"+metrics.ID+","+metrics.MType)
 
 	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
-	rw.Header().Set("Content-Type", "application/json")
 
 	switch metrics.MType {
 	case "gauge":
-		value, ok := s.GetGauge(metrics.ID)
-		if !ok {
-			logger.WriteInfoLog("Error value of gauge is not Ok", "ID:"+metrics.ID)
-			s.SetGauge(metrics.ID, 0)
+		value, err := s.GetGauge(metrics.ID)
+		if err != nil {
+			logger.WriteInfoLog(err.Error(), "GetGauge ID:"+metrics.ID)
+			err = s.SetGauge(metrics.ID, 0)
+			if err != nil {
+				logger.WriteInfoLog(err.Error(), "SetGauge ID:"+metrics.ID)
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 			value = 0
 		}
 		metrics.Value = &value
 	case "counter":
-		s.AddCounter(metrics.ID, models.Counter(0))
-		delta, ok := s.GetCounter(metrics.ID)
-		if !ok {
-			logger.WriteInfoLog("Error value of counter is not Ok", "ID:"+metrics.ID)
+		err := s.AddCounter(metrics.ID, models.Counter(0))
+		if err != nil {
+			logger.WriteInfoLog(err.Error(), "AddCounter ID:"+metrics.ID)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		delta, err := s.GetCounter(metrics.ID)
+		if err != nil {
+			logger.WriteInfoLog(err.Error(), "GetCounter ID:"+metrics.ID)
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		metrics.Delta = &delta
 	}
 
 	m := agentStorage.NewMonitor()
-	PrepareMetricsValues(s, m)
+	err := PrepareMetricsValues(s, m)
+
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "PrepareMetricsValues getValueMetricsJSON")
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	rw.Header().Set("Content-Type", "application/json")
 
 	enc := json.NewEncoder(rw)
 	if err := enc.Encode(metrics); err != nil {
 		logger.WriteErrorLog("error encoding response", err.Error())
 		return
 	}
+	logger.WriteDebugLog("", "sending HTTP 200 response")
+}
+
+// Home метод получения данных из всех метрик
+func ping(rw http.ResponseWriter, r *http.Request) {
+	rep, err := dml.NewRepository()
+	if err != nil {
+		logger.WriteErrorLog("Database storage ping error", err.Error())
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if err = db.CheckPing(rep); err != nil {
+		logger.WriteErrorLog("Database storage ping error", err.Error())
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	rw.WriteHeader(http.StatusOK)
+}
+
+// Home метод получения данных из всех метрик
+func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
+	var metrics []models.Metrics
+	dec := json.NewDecoder(r.Body)
+	err := dec.Decode(&metrics)
+
+	if err != nil {
+		logger.WriteDebugLog("cannot decode request JSON body", err.Error())
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	logMsg, _ := json.Marshal(metrics)
+	logger.WriteInfoLog("request body in updates/", string(logMsg))
+
+	result := make([]models.Metrics, len(metrics))
+
+	for i, m := range metrics {
+		result[i] = m
+
+		switch m.MType {
+		case "gauge":
+			if m.Value == nil {
+				d := float64(0)
+				m.Value = &d
+			}
+			err = dbs.SetGauge(m.ID, models.Gauge(*m.Value))
+			if err != nil {
+				logger.WriteErrorLog(err.Error(), "SetGauge ID:"+m.ID)
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			result[i].Value = m.Value
+		case "counter":
+			if m.Delta == nil {
+				d := int64(0)
+				m.Delta = &d
+			}
+			err = dbs.AddCounter(m.ID, models.Counter(*m.Delta))
+			if err != nil {
+				logger.WriteErrorLog(err.Error(), "AddCounter ID:"+m.ID)
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			newCounter, err := dbs.GetCounter(m.ID)
+			if err != nil {
+				logger.WriteErrorLog(err.Error(), "GetCounter ID:"+m.ID)
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			result[i].Delta = &newCounter
+		}
+	}
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	rw.Header().Set("Content-Type", "application/json")
+
+	enc := json.NewEncoder(rw)
+	if err = enc.Encode(result); err != nil {
+		logger.WriteErrorLog("error encoding response", err.Error())
+		return
+	}
+
 	logger.WriteDebugLog("", "sending HTTP 200 response")
 }

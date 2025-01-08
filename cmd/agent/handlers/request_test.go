@@ -74,7 +74,7 @@ func Test_request_SendMetricsJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := request{}
-			assert.NoError(t, r.SendMetricsJSON(JSONClientMock{}, 5))
+			assert.NoError(t, r.SendMetricsJSON(JSONClientMock{}, 11))
 		})
 	}
 }
@@ -143,6 +143,20 @@ func Test_client_SendPostRequestWithBody(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := JSONClientMock{}
 			tt.wantErr(t, c.SendPostRequestWithBody(tt.args.url, tt.args.body), fmt.Sprintf("SendPostRequestWithBody(%v, %v)", tt.args.url, tt.args.body))
+		})
+	}
+}
+
+func Test_request_SendMultipleMetricsJSON(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{"send request"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := request{}
+			assert.NoError(t, r.SendMultipleMetricsJSON(JSONClientMock{}, 11))
 		})
 	}
 }
