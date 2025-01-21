@@ -202,6 +202,7 @@ func CheckHashMiddleware(next http.Handler) http.Handler {
 			bodyHashSHA256 := hash.CreateSha256(body, handlers.HashKey)
 
 			if headerHashSHA256 != bodyHashSHA256 {
+				logger.WriteErrorLog("hash isn't correct", "HashSHA256")
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
