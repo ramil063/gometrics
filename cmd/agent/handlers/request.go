@@ -14,6 +14,7 @@ import (
 
 	"github.com/ramil063/gometrics/cmd/agent/storage"
 	internalErrors "github.com/ramil063/gometrics/internal/errors"
+	"github.com/ramil063/gometrics/internal/hash"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
@@ -78,6 +79,12 @@ func (c client) SendPostRequestWithBody(url string, body []byte) error {
 	req, _ := http.NewRequest("POST", url, bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept-Encoding", "gzip")
+
+	if HashKey != "" {
+		hashSha256 := hash.CreateSha256(body, HashKey)
+		req.Header.Set("HashSHA256", hashSha256)
+	}
+
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
@@ -218,7 +225,7 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) error {
 			v := reflect.ValueOf(m)
 			typeOfS := v.Type()
 			log.Println("send metrics json")
-			allMetrics := make([]models.Metrics, 100)
+			allMetrics := make([]models.Metrics, 0, 100)
 
 			for i := 0; i < v.NumField(); i++ {
 				metricID := typeOfS.Field(i).Name

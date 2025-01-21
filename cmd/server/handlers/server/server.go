@@ -44,6 +44,7 @@ func Router(s Storager) chi.Router {
 	r.Use(logger.RequestLogger)
 	r.Use(middlewares.GZIPMiddleware)
 	r.Use(middlewares.CheckMethodMw)
+	r.Use(middlewares.CheckHashMiddleware)
 
 	homeHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
 		home(rw, r, s)
