@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -44,6 +45,11 @@ type client struct {
 }
 
 type request struct {
+}
+
+// структура, в которую добавили ошибку
+type Result struct {
+	err error
 }
 
 func NewClient() Clienter {
@@ -207,61 +213,48 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) error {
 	var interval = 1 * time.Second
 	count := 0
 	seconds := 0
-	var m storage.Monitor
-	var err error
 	url := "http://" + MainURL + "/updates"
+
+	// создаем буферизованный канал для принятия метрик в сендер
+	requestBodies := make(chan []byte)
+	resultCh := make(chan Result)
+	var wg sync.WaitGroup
 
 	for maxCount < 0 || seconds < maxCount {
 		<-time.After(interval)
 		seconds++
 		if (seconds % PollInterval) == 0 {
-			log.Println("get metrics json")
-			m = storage.NewMonitor()
-			m.PollCount = models.Counter(count)
-			count++
+			select {
+			case result := <-resultCh:
+				if result.err != nil {
+					logger.WriteErrorLog(result.err.Error(), "Collect or prepare metrics error")
+					return result.err
+				}
+			default:
+				wg.Add(1)
+				monitor := CollectMonitorMetrics(&count)
+				monitor = CollectGopsutilMetrics(monitor, resultCh)
+				go CollectMetricsRequestBodies(requestBodies, monitor, &wg)
+			}
 		}
 
 		if (seconds % ReportInterval) == 0 {
-			v := reflect.ValueOf(m)
-			typeOfS := v.Type()
-			log.Println("send metrics json")
-			allMetrics := make([]models.Metrics, 0, 100)
-
-			for i := 0; i < v.NumField(); i++ {
-				metricID := typeOfS.Field(i).Name
-				metricValue, _ := strconv.ParseFloat(fmt.Sprintf("%v", v.Field(i).Interface()), 64)
-				delta := int64(m.PollCount)
-
-				metrics := models.Metrics{
-					ID:    metricID,
-					MType: "gauge",
-					Delta: nil,
-					Value: &metricValue,
+			select {
+			case result := <-resultCh:
+				if result.err != nil {
+					logger.WriteErrorLog(result.err.Error(), "Send metrics error")
+					return result.err
 				}
-
-				if typeOfS.Field(i).Name == "PollCount" {
-					metrics.MType = "counter"
-					metrics.Delta = &delta
-					metrics.Value = nil
+			default:
+				wg.Wait()
+				for worker := 0; worker < RateLimit; worker++ {
+					go SendMetrics(c, url, requestBodies, resultCh)
 				}
-				allMetrics = append(allMetrics, metrics)
-			}
-			body, err := json.Marshal(allMetrics)
-			if err != nil {
-				logger.WriteErrorLog("Error marshal metrics", err.Error())
-			}
-
-			if err = c.SendPostRequestWithBody(url, body); err != nil {
-				logger.WriteErrorLog("Error in request", err.Error())
-				var reqErr *internalErrors.RequestError
-				if errors.Is(err, reqErr) || errors.Is(err, syscall.ECONNREFUSED) {
-					err = retryToSendMetrics(c, url, body, internalErrors.TriesTimes)
-					return err
-				}
+				requestBodies = make(chan []byte)
 			}
 		}
 	}
-	return err
+	return nil
 }
 
 func retryToSendMetrics(c JSONClienter, url string, body []byte, tries []int) error {
@@ -275,4 +268,97 @@ func retryToSendMetrics(c JSONClienter, url string, body []byte, tries []int) er
 		logger.WriteErrorLog("Error in request by try:"+strconv.Itoa(try), err.Error())
 	}
 	return err
+}
+
+func CollectMetricsRequestBodies(requestBodies chan []byte, monitor chan storage.Monitor, wg *sync.WaitGroup) {
+	log.Println("get metrics json")
+	wg.Done()
+
+	m := <-monitor
+
+	v := reflect.ValueOf(m)
+	typeOfS := v.Type()
+	allMetrics := make([]models.Metrics, 0, 100)
+
+	for i := 0; i < v.NumField(); i++ {
+		metricID := typeOfS.Field(i).Name
+		metricValue, _ := strconv.ParseFloat(fmt.Sprintf("%v", v.Field(i).Interface()), 64)
+		delta := int64(m.PollCount)
+
+		metrics := models.Metrics{
+			ID:    metricID,
+			MType: "gauge",
+			Delta: nil,
+			Value: &metricValue,
+		}
+
+		if typeOfS.Field(i).Name == "PollCount" {
+			metrics.MType = "counter"
+			metrics.Delta = &delta
+			metrics.Value = nil
+		}
+		allMetrics = append(allMetrics, metrics)
+	}
+	body, err := json.Marshal(allMetrics)
+	if err != nil {
+		logger.WriteErrorLog("Error marshal metrics", err.Error())
+	}
+	requestBodies <- body
+}
+
+func CollectMonitorMetrics(count *int) chan storage.Monitor {
+	resultMonitor := make(chan storage.Monitor)
+
+	go func() {
+		defer close(resultMonitor)
+
+		var m storage.Monitor
+		m = storage.NewMonitor()
+		m.PollCount = models.Counter(*count)
+		*(count)++
+		resultMonitor <- m
+	}()
+
+	return resultMonitor
+}
+
+func CollectGopsutilMetrics(monitors chan storage.Monitor, resultCh chan Result) chan storage.Monitor {
+	resultMonitor := make(chan storage.Monitor)
+
+	go func() {
+		defer close(resultMonitor)
+
+		gm, err := storage.NewGopsutilMonitor()
+		if err != nil {
+			result := Result{err: err}
+			resultCh <- result
+		}
+
+		for m := range monitors {
+			m.TotalMemory = gm.TotalMemory
+			m.FreeMemory = gm.FreeMemory
+			m.CPUutilization1 = gm.CPUutilization1
+			resultMonitor <- m
+		}
+	}()
+
+	return resultMonitor
+}
+
+func SendMetrics(c JSONClienter, url string, requestBodies chan []byte, resultCh chan Result) {
+	log.Println("send metrics json")
+	var err error
+
+	for body := range requestBodies {
+		if err = c.SendPostRequestWithBody(url, body); err != nil {
+			logger.WriteErrorLog("Error in request", err.Error())
+			var reqErr *internalErrors.RequestError
+			if errors.Is(err, reqErr) || errors.Is(err, syscall.ECONNREFUSED) {
+				err = retryToSendMetrics(c, url, body, internalErrors.TriesTimes)
+				result := Result{err: err}
+				resultCh <- result
+				return
+			}
+		}
+	}
 }

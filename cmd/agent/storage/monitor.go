@@ -3,7 +3,12 @@ package storage
 import (
 	"math/rand"
 	"runtime"
+	"time"
 
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/mem"
+
+	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
 
@@ -31,12 +36,21 @@ type Monitor struct {
 	StackSys,
 	MSpanInuse,
 	MSpanSys,
+	TotalMemory,
+	FreeMemory,
 	TotalAlloc uint64
+	CPUutilization1,
 	GCCPUFraction float64
 	NumForcedGC,
 	NumGC uint32
 	PollCount   models.Counter
 	RandomValue models.Gauge
+}
+
+type GopsutilMonitor struct {
+	TotalMemory,
+	FreeMemory uint64
+	CPUutilization1 float64
 }
 
 func NewMonitor() Monitor {
@@ -80,4 +94,43 @@ func NewMonitor() Monitor {
 	m.NumGC = rtm.NumGC
 	m.RandomValue = models.Gauge(rand.Float64())
 	return m
+}
+
+func NewGopsutilMonitor() (GopsutilMonitor, error) {
+	var m GopsutilMonitor
+	// Получаем информацию о памяти
+	vmStat, err := mem.VirtualMemory()
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "gopsutil mem.VirtualMemory")
+		return m, err
+	}
+
+	// Получаем количество логических CPU
+	numCPU, err := cpu.Counts(true)
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "gopsutil cpu.Counts")
+		return m, err
+	}
+
+	// Получаем использование CPU за 1 секунду
+	cpuPercent, err := cpu.Percent(time.Second, true)
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "gopsutil cpu.Percent")
+		return m, err
+	}
+
+	sumPercent := 0.0
+	// использование CPU для каждого ядра
+	for _, percent := range cpuPercent {
+		sumPercent += percent
+	}
+
+	// TotalMemory - общий объем памяти
+	m.TotalMemory = vmStat.Total
+	// FreeMemory - свободный объем памяти
+	m.FreeMemory = vmStat.Free
+	//точное количество — по числу CPU, определяемому во время исполнения
+	m.CPUutilization1 = sumPercent / float64(numCPU)
+
+	return m, nil
 }
