@@ -312,8 +312,7 @@ func CollectMonitorMetrics(count *int) chan storage.Monitor {
 	go func() {
 		defer close(resultMonitor)
 
-		var m storage.Monitor
-		m = storage.NewMonitor()
+		m := storage.NewMonitor()
 		m.PollCount = models.Counter(*count)
 		*(count)++
 		resultMonitor <- m
