@@ -218,7 +218,6 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 
 	// создаем канал для принятия метрик в сендер
 	requestBodies := make(chan []byte)
-	monitor := make(chan storage.Monitor)
 	monitors := make(chan storage.Monitor)
 
 	tickerPool := time.NewTicker(pollInterval)
@@ -233,7 +232,7 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 		case <-tickerPool.C:
 			var wg sync.WaitGroup
 			wg.Add(2)
-			monitor = CollectMonitorMetrics(&count, &wg)
+			monitor := CollectMonitorMetrics(&count, &wg)
 			CollectGopsutilMetrics(monitors, monitor, &wg)
 			log.Println("get metrics json")
 			wg.Wait()
