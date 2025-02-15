@@ -3,6 +3,7 @@ package storage
 import (
 	"math/rand"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -39,18 +40,18 @@ type Monitor struct {
 	TotalMemory,
 	FreeMemory,
 	TotalAlloc uint64
-	CPUutilization1,
 	GCCPUFraction float64
 	NumForcedGC,
 	NumGC uint32
-	PollCount   models.Counter
-	RandomValue models.Gauge
+	PollCount      models.Counter
+	RandomValue    models.Gauge
+	CPUutilization map[int]models.Gauge
 }
 
 type GopsutilMonitor struct {
 	TotalMemory,
 	FreeMemory uint64
-	CPUutilization1 float64
+	CPUutilization map[int]models.Gauge
 }
 
 func NewMonitor() Monitor {
@@ -93,44 +94,98 @@ func NewMonitor() Monitor {
 	m.TotalAlloc = rtm.TotalAlloc
 	m.NumGC = rtm.NumGC
 	m.RandomValue = models.Gauge(rand.Float64())
+	m.InitCPUutilizationValue()
 	return m
 }
 
 func NewGopsutilMonitor() (GopsutilMonitor, error) {
-	var m GopsutilMonitor
+	var gm GopsutilMonitor
+	gm.InitCPUutilizationValue()
 	// Получаем информацию о памяти
 	vmStat, err := mem.VirtualMemory()
 	if err != nil {
 		logger.WriteErrorLog(err.Error(), "gopsutil mem.VirtualMemory")
-		return m, err
+		return gm, err
 	}
 
 	// Получаем количество логических CPU
-	numCPU, err := cpu.Counts(true)
+	_, err = cpu.Counts(true)
 	if err != nil {
 		logger.WriteErrorLog(err.Error(), "gopsutil cpu.Counts")
-		return m, err
+		return gm, err
 	}
 
 	// Получаем использование CPU за 1 секунду
 	cpuPercent, err := cpu.Percent(time.Second, true)
 	if err != nil {
 		logger.WriteErrorLog(err.Error(), "gopsutil cpu.Percent")
-		return m, err
+		return gm, err
 	}
 
-	sumPercent := 0.0
 	// использование CPU для каждого ядра
-	for _, percent := range cpuPercent {
-		sumPercent += percent
+	for key, percent := range cpuPercent {
+		gm.StoreCPUutilizationValue(key, models.Gauge(percent))
 	}
 
 	// TotalMemory - общий объем памяти
-	m.TotalMemory = vmStat.Total
+	gm.TotalMemory = vmStat.Total
 	// FreeMemory - свободный объем памяти
-	m.FreeMemory = vmStat.Free
+	gm.FreeMemory = vmStat.Free
 	//точное количество — по числу CPU, определяемому во время исполнения
-	m.CPUutilization1 = sumPercent / float64(numCPU)
 
-	return m, nil
+	return gm, nil
+}
+
+func (m *Monitor) InitCPUutilizationValue() {
+	var mx sync.RWMutex
+	mx.Lock()
+	m.CPUutilization = make(map[int]models.Gauge)
+	defer mx.Unlock()
+}
+
+func (m *Monitor) StoreCPUutilizationValue(key int, value models.Gauge) {
+	var mx sync.RWMutex
+	mx.Lock()
+	m.CPUutilization[key] = value
+	mx.Unlock()
+}
+
+func (m *Monitor) GetAllCPUutilization() map[int]models.Gauge {
+	var mx sync.RWMutex
+
+	mx.RLock()
+	mapCopy := make(map[int]models.Gauge, len(m.CPUutilization))
+	for key, val := range m.CPUutilization {
+		mapCopy[key] = val
+	}
+	mx.RUnlock()
+
+	return mapCopy
+}
+
+func (gm *GopsutilMonitor) InitCPUutilizationValue() {
+	var mx sync.RWMutex
+	mx.Lock()
+	gm.CPUutilization = make(map[int]models.Gauge)
+	mx.Unlock()
+}
+
+func (gm *GopsutilMonitor) StoreCPUutilizationValue(key int, value models.Gauge) {
+	var mx sync.RWMutex
+	mx.Lock()
+	gm.CPUutilization[key] = value
+	mx.Unlock()
+}
+
+func (gm *GopsutilMonitor) GetAllCPUutilization() map[int]models.Gauge {
+	var mx sync.RWMutex
+
+	mx.RLock()
+	mapCopy := make(map[int]models.Gauge, len(gm.CPUutilization))
+	for key, val := range gm.CPUutilization {
+		mapCopy[key] = val
+	}
+	mx.RUnlock()
+
+	return mapCopy
 }

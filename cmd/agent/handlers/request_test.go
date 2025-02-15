@@ -156,7 +156,7 @@ func Test_request_SendMultipleMetricsJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := request{}
-			assert.NoError(t, r.SendMultipleMetricsJSON(JSONClientMock{}, 11))
+			r.SendMultipleMetricsJSON(JSONClientMock{}, 7)
 		})
 	}
 }
