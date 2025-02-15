@@ -47,11 +47,6 @@ type client struct {
 type request struct {
 }
 
-// структура, в которую добавили ошибку
-type Result struct {
-	err error
-}
-
 func NewClient() Clienter {
 	return client{
 		httpClient: &http.Client{},
@@ -272,11 +267,6 @@ func CollectMetricsRequestBodies(requestBodies chan []byte, monitors chan storag
 
 		for i := 0; i < v.NumField(); i++ {
 			metricID := typeOfS.Field(i).Name
-			// Пропускаем поле "mx"
-			if metricID == "mx" {
-				continue
-			}
-
 			metricValue, _ := strconv.ParseFloat(fmt.Sprintf("%v", v.Field(i).Interface()), 64)
 			delta := int64(m.PollCount)
 
