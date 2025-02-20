@@ -315,8 +315,7 @@ func CollectMonitorMetrics(count *int, wg *sync.WaitGroup) chan storage.Monitor 
 		defer close(resultMonitor)
 
 		m := storage.NewMonitor()
-		m.PollCount = models.Counter(*count)
-		*(count)++
+		m.StoreCountValue(*count)
 		resultMonitor <- m
 	}()
 

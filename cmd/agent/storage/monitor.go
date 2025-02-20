@@ -143,6 +143,23 @@ func (m *Monitor) InitCPUutilizationValue() {
 	defer mx.Unlock()
 }
 
+func (m *Monitor) StoreCountValue(value int) {
+	var mx sync.RWMutex
+	mx.Lock()
+	m.PollCount = models.Counter(value)
+	mx.Unlock()
+}
+
+func (m *Monitor) GetCountValue() models.Counter {
+	var mx sync.RWMutex
+
+	mx.RLock()
+	val := m.PollCount
+	mx.RUnlock()
+
+	return val
+}
+
 func (m *Monitor) StoreCPUutilizationValue(key int, value models.Gauge) {
 	var mx sync.RWMutex
 	mx.Lock()
