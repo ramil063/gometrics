@@ -78,7 +78,8 @@ func (c client) SendPostRequest(url string) error {
 // SendPostRequestWithBody отправка пост запроса с телом
 func (c client) SendPostRequestWithBody(url string, body []byte) error {
 	req, _ := http.NewRequest("POST", url, bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("Accept-Encoding", "gzip")
 
 	if HashKey != "" {
