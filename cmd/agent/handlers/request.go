@@ -227,7 +227,8 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 		case <-tickerPool.C:
 			var wg sync.WaitGroup
 			wg.Add(2)
-			monitor := CollectMonitorMetrics(&count, &wg)
+			count++
+			monitor := CollectMonitorMetrics(count, &wg)
 			CollectGopsutilMetrics(monitors, monitor, &wg)
 			log.Println("get metrics json")
 			wg.Wait()
@@ -238,6 +239,7 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 			for worker := 0; worker < RateLimit; worker++ {
 				go SendMetrics(c, url, requestBodies, &sendWg)
 			}
+			count = 0
 			requestBodies = make(chan []byte)
 			monitors = make(chan storage.Monitor)
 		}
@@ -268,7 +270,7 @@ func CollectMetricsRequestBodies(requestBodies chan []byte, monitors chan storag
 		for i := 0; i < v.NumField(); i++ {
 			metricID := typeOfS.Field(i).Name
 			metricValue, _ := strconv.ParseFloat(fmt.Sprintf("%v", v.Field(i).Interface()), 64)
-			delta := int64(m.PollCount)
+			delta := int64(m.GetCountValue())
 
 			if metricID == "CPUutilization" {
 				CPUutilization := m.GetAllCPUutilization()
@@ -307,7 +309,7 @@ func CollectMetricsRequestBodies(requestBodies chan []byte, monitors chan storag
 	}
 }
 
-func CollectMonitorMetrics(count *int, wg *sync.WaitGroup) chan storage.Monitor {
+func CollectMonitorMetrics(count int, wg *sync.WaitGroup) chan storage.Monitor {
 	resultMonitor := make(chan storage.Monitor)
 	defer wg.Done()
 
@@ -315,7 +317,7 @@ func CollectMonitorMetrics(count *int, wg *sync.WaitGroup) chan storage.Monitor 
 		defer close(resultMonitor)
 
 		m := storage.NewMonitor()
-		m.StoreCountValue(*count)
+		m.StoreCountValue(count)
 		resultMonitor <- m
 	}()
 
