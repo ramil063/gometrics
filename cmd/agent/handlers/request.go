@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -77,8 +78,12 @@ func (c client) SendPostRequest(url string) error {
 
 // SendPostRequestWithBody отправка пост запроса с телом
 func (c client) SendPostRequestWithBody(url string, body []byte) error {
-	req, _ := http.NewRequest("POST", url, bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/octet-stream")
+	data, err := compressData(body)
+	if err != nil {
+		return err
+	}
+	req, _ := http.NewRequest("POST", url, bytes.NewReader(data))
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("Accept-Encoding", "gzip")
 
@@ -361,4 +366,21 @@ func SendMetrics(c JSONClienter, url string, requestBodies chan []byte, wg *sync
 			}
 		}
 	}
+}
+
+// compressData Функция для сжатия данных
+func compressData(data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+
+	_, err := gz.Write(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = gz.Close(); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
