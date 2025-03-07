@@ -1,10 +1,10 @@
 package db
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"github.com/ramil063/gometrics/internal/models"
