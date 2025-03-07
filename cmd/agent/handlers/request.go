@@ -237,7 +237,7 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 
 	go func() {
 		defer tickerPool.Stop()
-		for {
+		for maxCount < 0 {
 			select {
 			case <-tickerPool.C:
 				mu.Lock()
@@ -253,7 +253,7 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 				sendMonitor <- &monitor
 				log.Println("get metrics json end")
 				if len(sendMonitor) == 1 {
-					_ = <-sendMonitor
+					<-sendMonitor
 				}
 			}
 		}
@@ -261,7 +261,7 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 
 	go func() {
 		defer tickerReport.Stop()
-		for {
+		for maxCount < 0 {
 			select {
 			case <-tickerReport.C:
 				log.Println("send metrics json start")
@@ -286,7 +286,6 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 		times++
 		time.Sleep(1 * time.Second)
 	}
-	return
 }
 
 func retryToSendMetrics(c JSONClienter, url string, body []byte, tries []int) error {

@@ -11,9 +11,9 @@ import (
 func TestNewMonitor(t *testing.T) {
 	tests := []struct {
 		name string
-		want Monitor
+		want *Monitor
 	}{
-		{"check monitor", Monitor{PollCount: 0}},
+		{"check monitor", &Monitor{PollCount: 0}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
