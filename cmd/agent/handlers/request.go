@@ -238,45 +238,44 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 	go func() {
 		defer tickerPool.Stop()
 		for maxCount < 0 {
-			select {
-			case <-tickerPool.C:
-				mu.Lock()
-				count++
-				mu.Unlock()
+			<-tickerPool.C
 
-				log.Println("get metrics json start")
-				var collectWg sync.WaitGroup
-				CollectMonitorMetrics(count, &monitor, &collectWg)
-				CollectGopsutilMetrics(&monitor, &collectWg)
-				collectWg.Wait()
+			mu.Lock()
+			count++
+			mu.Unlock()
 
-				sendMonitor <- &monitor
-				log.Println("get metrics json end")
-				if len(sendMonitor) == 1 {
-					<-sendMonitor
-				}
+			log.Println("get metrics json start")
+			var collectWg sync.WaitGroup
+			CollectMonitorMetrics(count, &monitor, &collectWg)
+			CollectGopsutilMetrics(&monitor, &collectWg)
+			collectWg.Wait()
+
+			sendMonitor <- &monitor
+			log.Println("get metrics json end")
+			if len(sendMonitor) == 1 {
+				<-sendMonitor
 			}
+
 		}
 	}()
 
 	go func() {
 		defer tickerReport.Stop()
 		for maxCount < 0 {
-			select {
-			case <-tickerReport.C:
-				log.Println("send metrics json start")
-				mon := <-sendMonitor
-				log.Println("send metrics json count value=", mon.GetCountValue())
+			<-tickerReport.C
 
-				for worker := 0; worker < RateLimit; worker++ {
-					go SendMetrics(c, url, mon, worker)
-				}
+			log.Println("send metrics json start")
+			mon := <-sendMonitor
+			log.Println("send metrics json count value=", mon.GetCountValue())
 
-				mu.Lock()
-				count = 0
-				mu.Unlock()
-				log.Println("send metrics json end")
+			for worker := 0; worker < RateLimit; worker++ {
+				go SendMetrics(c, url, mon, worker)
 			}
+
+			mu.Lock()
+			count = 0
+			mu.Unlock()
+			log.Println("send metrics json end")
 		}
 	}()
 
