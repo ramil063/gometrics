@@ -33,12 +33,15 @@ func SaveMetricsPerTime(workTime int, ticker *time.Ticker, s Storager) error {
 	return nil
 }
 
-func PrepareMetricsValues(s Storager, m storage.Monitor) error {
-	v := reflect.ValueOf(m)
+func PrepareMetricsValues(s Storager, m *storage.Monitor) error {
+	v := reflect.ValueOf(m).Elem()
 	typeOfS := v.Type()
 
 	for i := 0; i < v.NumField(); i++ {
 		metricID := typeOfS.Field(i).Name
+		if metricID == "mx" {
+			continue
+		}
 		metricValue, _ := strconv.ParseFloat(fmt.Sprintf("%v", v.Field(i).Interface()), 64)
 
 		if typeOfS.Field(i).Name == "PollCount" {

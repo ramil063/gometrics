@@ -14,6 +14,7 @@ var StoreInterval = 300
 var FileStoragePath = "internal/storage/files/metrics.json"
 var Restore = true
 var DatabaseDSN = ""
+var HashKey = ""
 
 type EnvVars struct {
 	Address         string `env:"ADDRESS"`
@@ -21,6 +22,7 @@ type EnvVars struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
+	HashKey         string `env:"KEY"`
 }
 
 func ParseFlags() {
@@ -29,6 +31,7 @@ func ParseFlags() {
 	flag.IntVar(&StoreInterval, "i", 300, "interval of saving metrics to file")
 	flag.StringVar(&FileStoragePath, "f", "internal/storage/files/metrics.json", "file storage path")
 	flag.BoolVar(&Restore, "r", true, "file storage path")
+	flag.StringVar(&HashKey, "k", "", "key for hash")
 	flag.Parse()
 
 	var ev EnvVars
@@ -50,8 +53,13 @@ func ParseFlags() {
 	if !ev.Restore {
 		Restore = ev.Restore
 	}
+
 	if ev.DatabaseDSN != "" {
 		DatabaseDSN = ev.DatabaseDSN
+	}
+
+	if ev.HashKey != "" {
+		HashKey = ev.HashKey
 	}
 
 	logger.WriteInfoLog("set g.var", "Address:"+MainURL)
@@ -59,4 +67,5 @@ func ParseFlags() {
 	logger.WriteInfoLog("set g.var", "FileStoragePath:"+FileStoragePath)
 	logger.WriteInfoLog("set g.var", "Restore:"+strconv.FormatBool(Restore))
 	logger.WriteInfoLog("set g.var", "DatabaseDSN:"+DatabaseDSN)
+	logger.WriteInfoLog("set g.var", "HashKey:"+HashKey)
 }

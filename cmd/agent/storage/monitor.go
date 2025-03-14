@@ -3,7 +3,13 @@ package storage
 import (
 	"math/rand"
 	"runtime"
+	"sync"
+	"time"
 
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/mem"
+
+	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
 )
 
@@ -31,20 +37,28 @@ type Monitor struct {
 	StackSys,
 	MSpanInuse,
 	MSpanSys,
+	TotalMemory,
+	FreeMemory,
 	TotalAlloc uint64
 	GCCPUFraction float64
 	NumForcedGC,
 	NumGC uint32
-	PollCount   models.Counter
-	RandomValue models.Gauge
+	PollCount      models.Counter
+	RandomValue    models.Gauge
+	CPUutilization map[int]models.Gauge
+	mx             sync.RWMutex
 }
 
-func NewMonitor() Monitor {
+func NewMonitor() *Monitor {
 	var m Monitor
+	SetMetricsToMonitor(&m)
+	return &m
+}
+func SetMetricsToMonitor(m *Monitor) {
 	var rtm runtime.MemStats
 	// Read full mem stats
 	runtime.ReadMemStats(&rtm)
-
+	m.mx.Lock()
 	// Misc memory stats
 	m.Alloc = rtm.Alloc
 	m.TotalAlloc = rtm.TotalAlloc
@@ -79,5 +93,78 @@ func NewMonitor() Monitor {
 	m.TotalAlloc = rtm.TotalAlloc
 	m.NumGC = rtm.NumGC
 	m.RandomValue = models.Gauge(rand.Float64())
-	return m
+	m.mx.Unlock()
+	m.InitCPUutilizationValue()
+}
+
+func SetGopsutilMetricsToMonitor(m *Monitor) error {
+	// Получаем информацию о памяти
+
+	vmStat, err := mem.VirtualMemory()
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "gopsutil mem.VirtualMemory")
+		return err
+	}
+
+	// Получаем количество логических CPU
+	_, err = cpu.Counts(true)
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "gopsutil cpu.Counts")
+		return err
+	}
+
+	// Получаем использование CPU за 1 наносекунду
+	cpuPercent, err := cpu.Percent(10*time.Millisecond, true)
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "gopsutil cpu.Percent")
+		return err
+	}
+
+	// использование CPU для каждого ядра
+	for key, percent := range cpuPercent {
+		m.StoreCPUutilizationValue(key, models.Gauge(percent))
+	}
+
+	// TotalMemory - общий объем памяти
+	m.TotalMemory = vmStat.Total
+	// FreeMemory - свободный объем памяти
+	m.FreeMemory = vmStat.Free
+	//точное количество — по числу CPU, определяемому во время исполнения
+
+	return nil
+}
+
+func (m *Monitor) InitCPUutilizationValue() {
+	m.mx.Lock()
+	m.CPUutilization = make(map[int]models.Gauge)
+	m.mx.Unlock()
+}
+
+func (m *Monitor) StoreCountValue(value int) {
+	m.mx.Lock()
+	m.PollCount = models.Counter(value)
+	m.mx.Unlock()
+}
+
+func (m *Monitor) GetCountValue() models.Counter {
+	m.mx.RLock()
+	val := m.PollCount
+	m.mx.RUnlock()
+	return val
+}
+
+func (m *Monitor) StoreCPUutilizationValue(key int, value models.Gauge) {
+	m.mx.Lock()
+	m.CPUutilization[key] = value
+	m.mx.Unlock()
+}
+
+func (m *Monitor) GetAllCPUutilization() map[int]models.Gauge {
+	m.mx.RLock()
+	mapCopy := make(map[int]models.Gauge, len(m.CPUutilization))
+	for key, val := range m.CPUutilization {
+		mapCopy[key] = val
+	}
+	m.mx.RUnlock()
+	return mapCopy
 }

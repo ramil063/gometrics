@@ -53,6 +53,7 @@ func Router(s Storager) chi.Router {
 	r.Get("/ping", ping)
 
 	r.Route("/updates", func(r chi.Router) {
+		r.Use(middlewares.CheckHashMiddleware)
 		updatesHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
 			updates(rw, r, s)
 		}

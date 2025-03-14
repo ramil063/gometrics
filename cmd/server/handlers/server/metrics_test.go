@@ -12,7 +12,7 @@ import (
 func TestPrepareMetricsValues(t *testing.T) {
 	type args struct {
 		ms Storager
-		m  storage.Monitor
+		m  *storage.Monitor
 	}
 	a := args{
 		ms: NewMemStorage(),

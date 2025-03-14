@@ -75,7 +75,7 @@ func (ms *MemStorage) GetAllCounters() map[string]models.Counter {
 }
 
 func (ms *MemStorage) SetGauge(name string, value models.Gauge) error {
-	ms.Gauges[name] = value
+	ms.StoreGaugeValue(name, value)
 	return nil
 }
 

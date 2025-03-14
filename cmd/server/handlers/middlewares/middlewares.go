@@ -1,11 +1,15 @@
 package middlewares
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/ramil063/gometrics/cmd/server/handlers"
+	"github.com/ramil063/gometrics/cmd/server/handlers/writers"
+	"github.com/ramil063/gometrics/internal/hash"
 	"github.com/ramil063/gometrics/internal/logger"
 )
 
@@ -173,6 +177,7 @@ func GZIPMiddleware(next http.Handler) http.Handler {
 			// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
 			cr, err := handlers.NewCompressReader(r.Body)
 			if err != nil {
+				logger.WriteErrorLog(err.Error(), "gzip middleware")
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -183,5 +188,34 @@ func GZIPMiddleware(next http.Handler) http.Handler {
 
 		// передаём управление хендлеру
 		next.ServeHTTP(ow, r)
+	})
+}
+
+// CheckHashMiddleware проверка полученного и высчитанного хеша(подписи)
+func CheckHashMiddleware(next http.Handler) http.Handler {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		if handlers.HashKey != "" {
+			body, _ := io.ReadAll(r.Body)
+
+			headerHashSHA256 := r.Header.Get("HashSHA256")
+			bodyHashSHA256 := hash.CreateSha256(body, handlers.HashKey)
+
+			if headerHashSHA256 != bodyHashSHA256 {
+				logger.WriteErrorLog("hash isn't correct", "HashSHA256")
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			//возвращаем прочитанное тело обратно
+			r.Body = io.NopCloser(bytes.NewBuffer(body))
+
+			// оборачиваем оригинальный http.ResponseWriter новым с поддержкой добавления заголовка хеша при ответе
+			hw := writers.NewHashWriter(w, body, handlers.HashKey)
+			// меняем оригинальный http.ResponseWriter на новый
+			w = hw
+		}
+		// передаём управление хендлеру
+		next.ServeHTTP(w, r)
 	})
 }

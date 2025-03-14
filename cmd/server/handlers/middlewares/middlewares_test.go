@@ -13,7 +13,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"github.com/ramil063/gometrics/cmd/server/storage/memory"
+	"github.com/ramil063/gometrics/internal/hash"
 	"github.com/ramil063/gometrics/internal/models"
 )
 
@@ -404,4 +406,60 @@ func TestGZIPMiddleware(t *testing.T) {
 		_, err = io.ReadAll(zr)
 		require.NoError(t, err, "error in read all")
 	})
+}
+
+func TestCheckHashMiddleware(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+	})
+
+	srv := httptest.NewServer(handler)
+	defer srv.Close()
+
+	handlers.HashKey = "test"
+
+	testCases := []struct {
+		name         string // добавляем название тестов
+		method       string
+		body         models.Metrics // добавляем тело запроса в табличные тесты
+		expectedCode int
+		expectedBody string
+	}{
+		{
+			name:         "test 1",
+			method:       http.MethodPost,
+			body:         models.Metrics{ID: "metric1", MType: "gauge", Delta: nil, Value: nil},
+			expectedCode: http.StatusOK,
+			expectedBody: "",
+		},
+		{
+			name:         "test 2",
+			method:       http.MethodPost,
+			body:         models.Metrics{ID: "metric2", MType: "counter", Delta: nil, Value: nil},
+			expectedCode: http.StatusOK,
+			expectedBody: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.method, func(t *testing.T) {
+			body, _ := json.Marshal(tc.body)
+			request := httptest.NewRequest(tc.method, "/update", bytes.NewReader(body))
+
+			request.Header.Set("HashSHA256", hash.CreateSha256(body, handlers.HashKey))
+			request.Header.Set("Content-Type", "application/json")
+			// создаём новый Recorder
+			w := httptest.NewRecorder()
+
+			handlerToTest := CheckHashMiddleware(handler)
+			handlerToTest.ServeHTTP(w, request)
+
+			res := w.Result()
+			// проверяем код ответа
+			assert.Equal(t, tc.expectedCode, res.StatusCode, "Response code didn't match expected")
+
+			defer res.Body.Close()
+		})
+	}
 }
