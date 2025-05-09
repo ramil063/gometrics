@@ -373,44 +373,13 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 	//logMsg, _ := json.Marshal(metrics)
 	//logger.WriteInfoLog("request body in updates/", string(logMsg))
 
-	result := make([]models.Metrics, len(metrics))
+	result, err := updateMetrics(dbs, metrics)
 
-	for i, m := range metrics {
-		result[i] = m
-
-		switch m.MType {
-		case "gauge":
-			if m.Value == nil {
-				d := float64(0)
-				m.Value = &d
-			}
-			err = dbs.SetGauge(m.ID, models.Gauge(*m.Value))
-			if err != nil {
-				logger.WriteErrorLog(err.Error(), "SetGauge ID:"+m.ID)
-				rw.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			result[i].Value = m.Value
-		case "counter":
-			if m.Delta == nil {
-				d := int64(0)
-				m.Delta = &d
-			}
-			err = dbs.AddCounter(m.ID, models.Counter(*m.Delta))
-			if err != nil {
-				logger.WriteErrorLog(err.Error(), "AddCounter ID:"+m.ID)
-				rw.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			newCounter, err := dbs.GetCounter(m.ID)
-			if err != nil {
-				logger.WriteErrorLog(err.Error(), "GetCounter ID:"+m.ID)
-				rw.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			result[i].Delta = &newCounter
-		}
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
 	rw.Header().Set("Content-Type", "application/json")
@@ -422,4 +391,43 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 	}
 
 	logger.WriteDebugLog("", "sending HTTP 200 response")
+}
+
+func updateMetrics(dbs Storager, metrics []models.Metrics) ([]models.Metrics, error) {
+	result := make([]models.Metrics, 0, len(metrics))
+
+	for _, m := range metrics {
+		current := m
+
+		switch current.MType {
+		case "gauge":
+			if current.Value == nil {
+				zero := 0.0
+				current.Value = &zero
+			}
+			if err := dbs.SetGauge(current.ID, models.Gauge(*current.Value)); err != nil {
+				logger.WriteErrorLog(err.Error(), "SetGauge ID:"+current.ID)
+				return nil, err
+			}
+		case "counter":
+			if current.Delta == nil {
+				zero := int64(0)
+				current.Delta = &zero
+			}
+			if err := dbs.AddCounter(current.ID, models.Counter(*current.Delta)); err != nil {
+				logger.WriteErrorLog(err.Error(), "AddCounter ID:"+current.ID)
+				return nil, err
+			}
+			newCounter, err := dbs.GetCounter(current.ID)
+			if err != nil {
+				logger.WriteErrorLog(err.Error(), "GetCounter ID:"+m.ID)
+				return nil, err
+			}
+			current.Delta = &newCounter
+		}
+
+		result = append(result, current)
+	}
+
+	return result, nil
 }

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/ramil063/gometrics/internal/models"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -353,5 +354,59 @@ func Test_updates(t *testing.T) {
 				assert.JSONEq(t, tc.expectedBody, string(resp.Body()))
 			}
 		})
+	}
+}
+
+func Test_updateMetrics(t *testing.T) {
+	dbs := NewMemStorage()
+
+	tests := []struct {
+		name    string
+		metrics []models.Metrics
+		want    []models.Metrics
+		delta   int64
+	}{
+		{
+			name: "test 1",
+			metrics: []models.Metrics{
+				{
+					ID:    "met1",
+					MType: "counter",
+				},
+			},
+			want: []models.Metrics{
+				{
+					ID:    "met1",
+					MType: "counter",
+				},
+			},
+			delta: 1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.metrics[0].Delta = &tt.delta
+
+			got, err := updateMetrics(dbs, tt.metrics)
+			assert.NoError(t, err, "error making HTTP request")
+			assert.Equal(t, tt.want[0].ID, got[0].ID)
+			assert.Equal(t, tt.want[0].MType, got[0].MType)
+			assert.Equal(t, tt.delta, *(got[0].Delta))
+		})
+	}
+}
+
+func BenchmarkUpdateMetrics(b *testing.B) {
+	dbs := NewMemStorage()
+	metrics := []models.Metrics{
+		{
+			ID:    "met1",
+			MType: "counter",
+		},
+	}
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		_, _ = updateMetrics(dbs, metrics)
 	}
 }
