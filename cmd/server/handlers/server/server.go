@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/http/pprof"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -91,6 +92,17 @@ func Router(s Storager) chi.Router {
 		}
 		r.With(middlewares.CheckPostMethodMw).Post("/", getValueMetricsJSONHandlerFunction)
 	})
+
+	r.HandleFunc("/debug/pprof/", pprof.Index)
+	r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	// Для heap/goroutine/block:
+	r.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+	r.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
+	r.Handle("/debug/pprof/block", pprof.Handler("block"))
+
 	return r
 }
 
@@ -357,8 +369,9 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 		return
 	}
 
-	logMsg, _ := json.Marshal(metrics)
-	logger.WriteInfoLog("request body in updates/", string(logMsg))
+	//only for autotests
+	//logMsg, _ := json.Marshal(metrics)
+	//logger.WriteInfoLog("request body in updates/", string(logMsg))
 
 	result := make([]models.Metrics, len(metrics))
 

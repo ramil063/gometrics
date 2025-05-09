@@ -2,11 +2,7 @@ package handlers
 
 import (
 	"flag"
-	"strconv"
-
 	"github.com/caarlos0/env/v6"
-
-	"github.com/ramil063/gometrics/internal/logger"
 )
 
 var MainURL = "localhost:8080"
@@ -62,10 +58,11 @@ func ParseFlags() {
 		HashKey = ev.HashKey
 	}
 
-	logger.WriteInfoLog("set g.var", "Address:"+MainURL)
-	logger.WriteInfoLog("set g.var", "StoreInterval:"+strconv.Itoa(StoreInterval))
-	logger.WriteInfoLog("set g.var", "FileStoragePath:"+FileStoragePath)
-	logger.WriteInfoLog("set g.var", "Restore:"+strconv.FormatBool(Restore))
-	logger.WriteInfoLog("set g.var", "DatabaseDSN:"+DatabaseDSN)
-	logger.WriteInfoLog("set g.var", "HashKey:"+HashKey)
+	//only for autotests
+	//logger.WriteInfoLog("set g.var", "Address:"+MainURL)
+	//logger.WriteInfoLog("set g.var", "StoreInterval:"+strconv.Itoa(StoreInterval))
+	//logger.WriteInfoLog("set g.var", "FileStoragePath:"+FileStoragePath)
+	//logger.WriteInfoLog("set g.var", "Restore:"+strconv.FormatBool(Restore))
+	//logger.WriteInfoLog("set g.var", "DatabaseDSN:"+DatabaseDSN)
+	//logger.WriteInfoLog("set g.var", "HashKey:"+HashKey)
 }

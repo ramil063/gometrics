@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	_ "net/http/pprof"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -20,8 +21,6 @@ func main() {
 		panic(err)
 	}
 	handlers.ParseFlags()
-
-	logger.WriteInfoLog("--------------START SERVER-------------", "")
 
 	var s = server.GetStorage(handlers.FileStoragePath, handlers.DatabaseDSN)
 
