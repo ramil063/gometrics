@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"flag"
+
 	"github.com/caarlos0/env/v6"
 )
 

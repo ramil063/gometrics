@@ -1,21 +1,21 @@
 package server
 
 import (
-	"github.com/ramil063/gometrics/internal/models"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"github.com/ramil063/gometrics/cmd/server/storage/db"
 	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
+	"github.com/ramil063/gometrics/internal/models"
 )
 
 func Test_update(t *testing.T) {

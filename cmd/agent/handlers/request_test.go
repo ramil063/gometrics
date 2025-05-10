@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/ramil063/gometrics/cmd/agent/storage"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -12,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/ramil063/gometrics/cmd/agent/storage"
 )
 
 type RequestMock struct {
