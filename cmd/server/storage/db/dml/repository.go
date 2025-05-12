@@ -1,3 +1,4 @@
+// Package dml пакет для работы с БД
 package dml
 
 import (
@@ -15,10 +16,12 @@ import (
 	"github.com/ramil063/gometrics/internal/models"
 )
 
+// Repository репозиторий для работы с БД
 type Repository struct {
 	Database *sql.DB
 }
 
+// DataBaser вся логика работы с БД
 type DataBaser interface {
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
@@ -29,8 +32,10 @@ type DataBaser interface {
 	SetDatabase() error
 }
 
+// DBRepository основная переменная для работы с БД
 var DBRepository Repository
 
+// ExecContext выполнить команду в БД
 func (dbr *Repository) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	result, err := dbr.Database.ExecContext(ctx, query, args...)
 	if err != nil {
@@ -46,6 +51,7 @@ func (dbr *Repository) ExecContext(ctx context.Context, query string, args ...an
 	return result, nil
 }
 
+// QueryRowContext выполнить команду в БД с возвратом данных(1 строчка)
 func (dbr *Repository) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
 	row := dbr.Database.QueryRowContext(ctx, query, args...)
 	if row.Err() != nil {
@@ -57,6 +63,7 @@ func (dbr *Repository) QueryRowContext(ctx context.Context, query string, args .
 	return row
 }
 
+// QueryContext выполнить команду в БД с возвратом данных(несколько строчек)
 func (dbr *Repository) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
 	rows, err := dbr.Database.QueryContext(ctx, query, args...)
 
@@ -72,6 +79,7 @@ func (dbr *Repository) QueryContext(ctx context.Context, query string, args ...a
 	return rows, nil
 }
 
+// Close закрыть соединение с БД
 func (dbr *Repository) Close() error {
 	err := dbr.Database.Close()
 	if err != nil {
@@ -80,6 +88,7 @@ func (dbr *Repository) Close() error {
 	return nil
 }
 
+// PingContext проверить соединение с БД
 func (dbr *Repository) PingContext(ctx context.Context) error {
 	err := dbr.Database.PingContext(ctx)
 	if err != nil {
@@ -94,6 +103,7 @@ func (dbr *Repository) PingContext(ctx context.Context) error {
 	return err
 }
 
+// SetDatabase установить соединение с БД и присвоить ссылку на переменную для работы с БД
 func (dbr *Repository) SetDatabase() error {
 	database, err := dbr.Open()
 	if err != nil {
@@ -104,6 +114,7 @@ func (dbr *Repository) SetDatabase() error {
 	return nil
 }
 
+// Open открыть соединения с БД
 func (dbr *Repository) Open() (*sql.DB, error) {
 	result, err := sql.Open("pgx", handlers.DatabaseDSN)
 	if err != nil {
@@ -124,6 +135,7 @@ func NewRepository() (*Repository, error) {
 	return rep, err
 }
 
+// CreateOrUpdateCounter создать или обновить счетчик метрики типа Counter
 func CreateOrUpdateCounter(dbr *Repository, name string, value models.Counter) (sql.Result, error) {
 	exec, err := dbr.ExecContext(
 		context.Background(),
@@ -140,6 +152,7 @@ func CreateOrUpdateCounter(dbr *Repository, name string, value models.Counter) (
 	return exec, nil
 }
 
+// CreateOrUpdateGauge создать или обновить счетчик метрики типа Gauge
 func CreateOrUpdateGauge(dbr *Repository, name string, value models.Gauge) (sql.Result, error) {
 	exec, err := dbr.ExecContext(
 		context.Background(),

@@ -20,6 +20,7 @@ func retryOpenFile(name string, flag int, perm os.FileMode, tries []int) (*os.Fi
 	return file, err
 }
 
+// ClearFileContent затирание содержимого файла
 func ClearFileContent(filePath string) error {
 	_, err := os.Stat(filePath)
 

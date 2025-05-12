@@ -9,12 +9,14 @@ import (
 	"github.com/ramil063/gometrics/internal/models"
 )
 
+// FStorage хранилище данных
 type FStorage struct {
 	Gauges   map[string]models.Gauge
 	Counters map[string]models.Counter
 	mx       sync.RWMutex
 }
 
+// StoreGaugeValue сохранение значения метрики типа Gauge
 func (s *FStorage) StoreGaugeValue(key string, value models.Gauge) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
@@ -22,6 +24,7 @@ func (s *FStorage) StoreGaugeValue(key string, value models.Gauge) {
 	s.Gauges[key] = value
 }
 
+// GetGaugeValue получение метрики типа Gauge по ключу
 func (s *FStorage) GetGaugeValue(key string) (models.Gauge, error) {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
@@ -34,6 +37,7 @@ func (s *FStorage) GetGaugeValue(key string) (models.Gauge, error) {
 	return val, err
 }
 
+// GetAllGauges получение значений всех метрик типа Gauge
 func (s *FStorage) GetAllGauges() map[string]models.Gauge {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
@@ -45,6 +49,7 @@ func (s *FStorage) GetAllGauges() map[string]models.Gauge {
 	return mapCopy
 }
 
+// StoreCounterValue сохранение значения метрики типа Counter
 func (s *FStorage) StoreCounterValue(key string, value models.Counter) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
@@ -52,6 +57,7 @@ func (s *FStorage) StoreCounterValue(key string, value models.Counter) {
 	s.Counters[key] = value
 }
 
+// GetCounterValue получение значения метрики типа Counter
 func (s *FStorage) GetCounterValue(key string) (models.Counter, error) {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
@@ -64,6 +70,7 @@ func (s *FStorage) GetCounterValue(key string) (models.Counter, error) {
 	return val, err
 }
 
+// GetAllCounters получение значений всех метрик типа Counter
 func (s *FStorage) GetAllCounters() map[string]models.Counter {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
@@ -75,6 +82,7 @@ func (s *FStorage) GetAllCounters() map[string]models.Counter {
 	return mapCopy
 }
 
+// SetGauge установка значения метрики типа Gauge с сохранением в файле
 func (s *FStorage) SetGauge(name string, value models.Gauge) error {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {
@@ -92,6 +100,7 @@ func (s *FStorage) SetGauge(name string, value models.Gauge) error {
 	return err
 }
 
+// GetGauge получение значения метрики типа Gauge из файла
 func (s *FStorage) GetGauge(name string) (float64, error) {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {
@@ -105,6 +114,7 @@ func (s *FStorage) GetGauge(name string) (float64, error) {
 	return float64(val), err
 }
 
+// GetGauges получение значений всех метрик типа Gauge из файла
 func (s *FStorage) GetGauges() (map[string]models.Gauge, error) {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {
@@ -122,6 +132,7 @@ func (s *FStorage) GetGauges() (map[string]models.Gauge, error) {
 	return metrics.GetAllGauges(), err
 }
 
+// AddCounter добавление(сохранение/обновление) значения метрики типа Counter
 func (s *FStorage) AddCounter(name string, value models.Counter) error {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {
@@ -145,6 +156,7 @@ func (s *FStorage) AddCounter(name string, value models.Counter) error {
 	return err
 }
 
+// GetCounter получение значения метрики типа Counter по имени
 func (s *FStorage) GetCounter(name string) (int64, error) {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {
@@ -162,6 +174,7 @@ func (s *FStorage) GetCounter(name string) (int64, error) {
 	return int64(val), err
 }
 
+// GetCounters получение значений всех метрик типа Counter
 func (s *FStorage) GetCounters() (map[string]models.Counter, error) {
 	metrics, err := ReadMetricsFromFile(handlers.FileStoragePath)
 	if err != nil {

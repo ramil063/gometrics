@@ -6,13 +6,25 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+// MainURL основной урл на которым поднят сервис
 var MainURL = "localhost:8080"
+
+// StoreInterval на какой промежуток сохраняются данные
 var StoreInterval = 300
+
+// FileStoragePath путь для сохранения данных
 var FileStoragePath = "internal/storage/files/metrics.json"
+
+// Restore флаг восстановления данных с сохраненного файла
 var Restore = true
+
+// DatabaseDSN настройки подключения к БД
 var DatabaseDSN = ""
+
+// HashKey ключ для декодирования зашифрованных данных
 var HashKey = ""
 
+// EnvVars содержит переменные флагов
 type EnvVars struct {
 	Address         string `env:"ADDRESS"`
 	StoreInterval   int    `env:"STORE_INTERVAL"`
@@ -22,6 +34,7 @@ type EnvVars struct {
 	HashKey         string `env:"KEY"`
 }
 
+// ParseFlags парсит глобальные переменные системы, или парсит флаги, или подменяет их значениями по умолчанию
 func ParseFlags() {
 	flag.StringVar(&MainURL, "a", "localhost:8080", "address and port to run server")
 	flag.StringVar(&DatabaseDSN, "d", "", "database DSN")

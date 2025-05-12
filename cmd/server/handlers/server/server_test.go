@@ -33,7 +33,7 @@ func Test_update(t *testing.T) {
 			w := httptest.NewRecorder()
 			updateHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
 				ms := NewMemStorage()
-				update(rw, req, ms)
+				Update(rw, req, ms)
 			}
 			handlerToTest := http.HandlerFunc(updateHandlerFunction)
 			handlerToTest.ServeHTTP(w, request)
@@ -184,7 +184,7 @@ func TestNewMemStorage(t *testing.T) {
 func Test_updateMetricsJSON(t *testing.T) {
 	handlers.Restore = false
 	updateMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-		updateMetricsJSON(rw, req, NewMemStorage())
+		UpdateMetricsJSON(rw, req, NewMemStorage())
 	}
 	handler := http.HandlerFunc(updateMetricsJSONHandlerFunction)
 	srv := httptest.NewServer(handler)
@@ -242,7 +242,7 @@ func Test_getValueMetricsJSON(t *testing.T) {
 	getValueMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
 		s := GetStorage("", "")
 		_ = s.SetGauge("met1", 1.1)
-		getValueMetricsJSON(rw, req, s)
+		GetValueMetricsJSON(rw, req, s)
 	}
 	handler := http.HandlerFunc(getValueMetricsJSONHandlerFunction)
 	srv := httptest.NewServer(handler)
@@ -307,7 +307,7 @@ func Test_updates(t *testing.T) {
 
 	updatesHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
 		s := &db.Storage{}
-		updates(rw, req, s)
+		Updates(rw, req, s)
 	}
 	handler := http.HandlerFunc(updatesHandlerFunction)
 	srv := httptest.NewServer(handler)
@@ -387,7 +387,7 @@ func Test_updateMetrics(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.metrics[0].Delta = &tt.delta
 
-			got, err := updateMetrics(dbs, tt.metrics)
+			got, err := UpdateMetrics(dbs, tt.metrics)
 			assert.NoError(t, err, "error making HTTP request")
 			assert.Equal(t, tt.want[0].ID, got[0].ID)
 			assert.Equal(t, tt.want[0].MType, got[0].MType)
@@ -407,6 +407,6 @@ func BenchmarkUpdateMetrics(b *testing.B) {
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
-		_, _ = updateMetrics(dbs, metrics)
+		_, _ = UpdateMetrics(dbs, metrics)
 	}
 }

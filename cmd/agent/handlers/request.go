@@ -21,21 +21,25 @@ import (
 	"github.com/ramil063/gometrics/internal/models"
 )
 
+// JSONRequester отправляет данные в формате json
 type JSONRequester interface {
 	SendMetricsJSON(c JSONClienter, maxCount int) error
 	SendMultipleMetricsJSON(c JSONClienter, maxCount int)
 }
 
+// Requester отправляет данные
 type Requester interface {
 	JSONRequester
 	SendMetrics(c Clienter, maxCount int) error
 }
 
+// Clienter работа с клиентов
 type Clienter interface {
 	SendPostRequest(url string) error
 	NewRequest(method string, url string) (*http.Request, error)
 }
 
+// JSONClienter работа с клиентом в формате json
 type JSONClienter interface {
 	Clienter
 	SendPostRequestWithBody(url string, body []byte) error
@@ -76,7 +80,7 @@ func (c client) SendPostRequest(url string) error {
 	return nil
 }
 
-// SendPostRequestWithBody отправка пост запроса с телом
+// SendPostRequestWithBody отправляет пост запроса с телом
 func (c client) SendPostRequestWithBody(url string, body []byte) error {
 	data, err := compressData(body)
 	if err != nil {
@@ -300,6 +304,7 @@ func retryToSendMetrics(c JSONClienter, url string, body []byte, tries []int) er
 	return err
 }
 
+// CollectMetricsRequestBodies сбор метрик в тела для отправки на сторонний сервис
 func CollectMetricsRequestBodies(monitor *storage.Monitor) []byte {
 	v := reflect.ValueOf(monitor).Elem()
 	typeOfS := v.Type()
@@ -350,6 +355,7 @@ func CollectMetricsRequestBodies(monitor *storage.Monitor) []byte {
 	return body
 }
 
+// CollectMonitorMetrics собирает метрики монитора
 func CollectMonitorMetrics(count int, monitor *storage.Monitor, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
@@ -359,6 +365,7 @@ func CollectMonitorMetrics(count int, monitor *storage.Monitor, wg *sync.WaitGro
 	}()
 }
 
+// CollectGopsutilMetrics собирает метрики через gopsutil
 func CollectGopsutilMetrics(monitor *storage.Monitor, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
@@ -370,6 +377,7 @@ func CollectGopsutilMetrics(monitor *storage.Monitor, wg *sync.WaitGroup) {
 	}()
 }
 
+// SendMetrics отправляет метрики(несколько раз в случае неудачной отправки)
 func SendMetrics(c JSONClienter, url string, monitor *storage.Monitor, worker int) {
 	var err error
 	body := CollectMetricsRequestBodies(monitor)

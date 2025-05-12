@@ -8,6 +8,7 @@ import (
 	"github.com/ramil063/gometrics/internal/models"
 )
 
+// GetGauge получение значения метрики типа Gauge по имени
 func (s *Storage) GetGauge(name string) (float64, error) {
 	row := dml.DBRepository.QueryRowContext(context.Background(), "SELECT value FROM gauge WHERE name = $1", name)
 	var selectedValue float64
@@ -17,6 +18,7 @@ func (s *Storage) GetGauge(name string) (float64, error) {
 	return selectedValue, err
 }
 
+// GetGauges получение всех метрик типа Gauge
 func (s *Storage) GetGauges() (map[string]models.Gauge, error) {
 	result := make(map[string]models.Gauge)
 
@@ -49,6 +51,7 @@ func (s *Storage) GetGauges() (map[string]models.Gauge, error) {
 	return result, err
 }
 
+// GetCounter получение метрики типа Counter по имени
 func (s *Storage) GetCounter(name string) (int64, error) {
 	row := dml.DBRepository.QueryRowContext(context.Background(), "SELECT value FROM counter WHERE name = $1", name)
 	var selectedValue int64
@@ -57,6 +60,7 @@ func (s *Storage) GetCounter(name string) (int64, error) {
 	return selectedValue, err
 }
 
+// GetCounters получение всех метрик типа Counter
 func (s *Storage) GetCounters() (map[string]models.Counter, error) {
 	result := make(map[string]models.Counter)
 	rows, err := dml.DBRepository.QueryContext(context.Background(), "SELECT name, value FROM counter")

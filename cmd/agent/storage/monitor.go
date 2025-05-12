@@ -1,3 +1,4 @@
+// Package storage основные структуры для работы с данными метрик
 package storage
 
 import (
@@ -13,6 +14,7 @@ import (
 	"github.com/ramil063/gometrics/internal/models"
 )
 
+// Monitor содержит все метрики
 type Monitor struct {
 	Alloc,
 	BuckHashSys,
@@ -54,6 +56,8 @@ func NewMonitor() *Monitor {
 	SetMetricsToMonitor(&m)
 	return &m
 }
+
+// SetMetricsToMonitor заполняет монитор основными метриками
 func SetMetricsToMonitor(m *Monitor) {
 	var rtm runtime.MemStats
 	// Read full mem stats
@@ -97,6 +101,7 @@ func SetMetricsToMonitor(m *Monitor) {
 	m.InitCPUutilizationValue()
 }
 
+// SetGopsutilMetricsToMonitor заполняет метриками gopsutil
 func SetGopsutilMetricsToMonitor(m *Monitor) error {
 	// Получаем информацию о памяти
 
@@ -134,6 +139,7 @@ func SetGopsutilMetricsToMonitor(m *Monitor) error {
 	return nil
 }
 
+// InitCPUutilizationValue инициализирует мапу хранящую данные по CPU
 func (m *Monitor) InitCPUutilizationValue() {
 	m.mx.Lock()
 	m.CPUutilization = make(map[int]models.Gauge)

@@ -18,20 +18,24 @@ import (
 	"github.com/ramil063/gometrics/internal/models"
 )
 
+// MaxSaverWorkTime максимальное время работы сохранения метрик
 var MaxSaverWorkTime = 900000
 
+// Gauger сохраняет и получает метрики типа Gauge
 type Gauger interface {
 	SetGauge(name string, value models.Gauge) error
 	GetGauge(name string) (float64, error)
 	GetGauges() (map[string]models.Gauge, error)
 }
 
+// Counterer сохраняет и получает метрики типа Counter
 type Counterer interface {
 	AddCounter(name string, value models.Counter) error
 	GetCounter(name string) (int64, error)
 	GetCounters() (map[string]models.Counter, error)
 }
 
+// Storager сохраняет и получает метрики
 type Storager interface {
 	Gauger
 	Counterer
@@ -47,16 +51,16 @@ func Router(s Storager) chi.Router {
 	r.Use(middlewares.CheckMethodMw)
 
 	homeHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
-		home(rw, r, s)
+		Home(rw, r, s)
 	}
 	r.Get("/", homeHandlerFunction)
 
-	r.Get("/ping", ping)
+	r.Get("/ping", Ping)
 
 	r.Route("/updates", func(r chi.Router) {
 		r.Use(middlewares.CheckHashMiddleware)
 		updatesHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {
-			updates(rw, r, s)
+			Updates(rw, r, s)
 		}
 		r.With(middlewares.CheckPostMethodMw).Post("/", updatesHandlerFunction)
 	})
@@ -66,14 +70,14 @@ func Router(s Storager) chi.Router {
 			r.Use(middlewares.CheckMetricsTypeMw)
 			r.Use(middlewares.CheckUpdateMetricsNameMw)
 			updateHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-				update(rw, req, s)
+				Update(rw, req, s)
 			}
 			r.With(middlewares.CheckUpdateMetricsValueMw).Post("/", updateHandlerFunction)
 			r.With(middlewares.CheckUpdateMetricsValueMw).Post("/{value}", updateHandlerFunction)
 		})
 
 		updateMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-			updateMetricsJSON(rw, req, s)
+			UpdateMetricsJSON(rw, req, s)
 		}
 		r.With(middlewares.CheckPostMethodMw).Post("/", updateMetricsJSONHandlerFunction)
 	})
@@ -82,13 +86,13 @@ func Router(s Storager) chi.Router {
 			r.Use(middlewares.CheckMetricsTypeMw)
 			r.Use(middlewares.CheckValueMetricsMw)
 			getValueHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-				getValue(rw, req, s)
+				GetValue(rw, req, s)
 			}
 			r.Get("/", getValueHandlerFunction)
 		})
 
 		getValueMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-			getValueMetricsJSON(rw, req, s)
+			GetValueMetricsJSON(rw, req, s)
 		}
 		r.With(middlewares.CheckPostMethodMw).Post("/", getValueMetricsJSONHandlerFunction)
 	})
@@ -107,7 +111,7 @@ func Router(s Storager) chi.Router {
 }
 
 // Update метод обновления данных для метрик
-func update(rw http.ResponseWriter, r *http.Request, ms Storager) {
+func Update(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	metricType := r.PathValue("type")
 	metricName := r.PathValue("metric")
 	metricValue := r.PathValue("value")
@@ -136,8 +140,8 @@ func update(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	}
 }
 
-// getValue метод получения данных из метрики
-func getValue(rw http.ResponseWriter, r *http.Request, ms Storager) {
+// GetValue метод получения данных из метрики
+func GetValue(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	metricType := r.PathValue("type")
 	metricName := r.PathValue("metric")
 
@@ -174,7 +178,7 @@ func getValue(rw http.ResponseWriter, r *http.Request, ms Storager) {
 }
 
 // Home метод получения данных из всех метрик
-func home(rw http.ResponseWriter, r *http.Request, ms Storager) {
+func Home(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	rw.Header().Set("Content-Type", "text/html")
 	rw.WriteHeader(http.StatusOK)
 	rw.Header().Set("Content-Type", "text/html")
@@ -223,8 +227,8 @@ func home(rw http.ResponseWriter, r *http.Request, ms Storager) {
 	}
 }
 
-// updateMetricsJSON метод обновления данных для метрик через json
-func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
+// UpdateMetricsJSON метод обновления данных для метрик через json
+func UpdateMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 
 	// десериализуем запрос в структуру модели
 	logger.WriteDebugLog("", "decoding request")
@@ -239,7 +243,7 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 	rw.Header().Set("Content-Type", "application/json")
 
 	logMsg, _ := json.Marshal(metrics)
-	logger.WriteInfoLog("request body in update/", string(logMsg))
+	logger.WriteInfoLog("request body in Update/", string(logMsg))
 
 	switch metrics.MType {
 	case "gauge":
@@ -276,8 +280,8 @@ func updateMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 	logger.WriteDebugLog("", "sending HTTP 200 response")
 }
 
-// getValueMetricsJSON метод обновления данных для метрик через json
-func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
+// GetValueMetricsJSON метод обновления данных для метрик через json
+func GetValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 	// десериализуем запрос в структуру модели
 	logger.WriteDebugLog("message", "decoding request")
 	var metrics models.Metrics
@@ -325,7 +329,7 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 	err := PrepareMetricsValues(s, m)
 
 	if err != nil {
-		logger.WriteErrorLog(err.Error(), "PrepareMetricsValues getValueMetricsJSON")
+		logger.WriteErrorLog(err.Error(), "PrepareMetricsValues GetValueMetricsJSON")
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -341,24 +345,24 @@ func getValueMetricsJSON(rw http.ResponseWriter, r *http.Request, s Storager) {
 	logger.WriteDebugLog("", "sending HTTP 200 response")
 }
 
-// Home метод получения данных из всех метрик
-func ping(rw http.ResponseWriter, r *http.Request) {
+// Ping метод проверки работы БД
+func Ping(rw http.ResponseWriter, r *http.Request) {
 	rep, err := dml.NewRepository()
 	if err != nil {
-		logger.WriteErrorLog("Database storage ping error", err.Error())
+		logger.WriteErrorLog("Database storage Ping error", err.Error())
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if err = db.CheckPing(rep); err != nil {
-		logger.WriteErrorLog("Database storage ping error", err.Error())
+		logger.WriteErrorLog("Database storage Ping error", err.Error())
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	rw.WriteHeader(http.StatusOK)
 }
 
-// Home метод получения данных из всех метрик
-func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
+// Updates метод обновления значений метрик
+func Updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 	var metrics []models.Metrics
 	dec := json.NewDecoder(r.Body)
 	err := dec.Decode(&metrics)
@@ -371,9 +375,9 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 
 	//only for autotests
 	//logMsg, _ := json.Marshal(metrics)
-	//logger.WriteInfoLog("request body in updates/", string(logMsg))
+	//logger.WriteInfoLog("request body in Updates/", string(logMsg))
 
-	result, err := updateMetrics(dbs, metrics)
+	result, err := UpdateMetrics(dbs, metrics)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
@@ -393,7 +397,8 @@ func updates(rw http.ResponseWriter, r *http.Request, dbs Storager) {
 	logger.WriteDebugLog("", "sending HTTP 200 response")
 }
 
-func updateMetrics(dbs Storager, metrics []models.Metrics) ([]models.Metrics, error) {
+// UpdateMetrics обновление значений метрик
+func UpdateMetrics(dbs Storager, metrics []models.Metrics) ([]models.Metrics, error) {
 	result := make([]models.Metrics, 0, len(metrics))
 
 	for _, m := range metrics {

@@ -33,6 +33,7 @@ func SaveMetricsPerTime(workTime int, ticker *time.Ticker, s Storager) error {
 	return nil
 }
 
+// PrepareMetricsValues подготовка значений метрик
 func PrepareMetricsValues(s Storager, m *storage.Monitor) error {
 	v := reflect.ValueOf(m).Elem()
 	typeOfS := v.Type()
