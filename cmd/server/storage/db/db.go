@@ -8,8 +8,10 @@ import (
 	"github.com/ramil063/gometrics/internal/logger"
 )
 
+// Storage хранилище данных
 type Storage struct{}
 
+// Init инициализация таблиц и общих настроек БД
 func Init(dbr dml.DataBaser) error {
 	var err error
 
@@ -22,6 +24,7 @@ func Init(dbr dml.DataBaser) error {
 	return err
 }
 
+// CheckPing проверка доступности БД
 func CheckPing(dbr dml.DataBaser) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
@@ -29,6 +32,7 @@ func CheckPing(dbr dml.DataBaser) error {
 	return dbr.PingContext(ctx)
 }
 
+// CreateTables создание таблиц БД(инициализация)
 func CreateTables(dbr dml.DataBaser) error {
 	var err error
 

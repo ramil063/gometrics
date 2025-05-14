@@ -7,9 +7,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/ramil063/gometrics/cmd/agent/storage"
 )
 
 type RequestMock struct {
@@ -180,5 +183,33 @@ func Test_compressData(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 			assert.NoError(t, err)
 		})
+	}
+}
+
+func BenchmarkCollectMetricsRequestBodies(b *testing.B) {
+	var m storage.Monitor
+
+	for i := 0; i < b.N; i++ {
+		CollectMetricsRequestBodies(&m)
+	}
+}
+
+func BenchmarkCollectMonitorMetrics(b *testing.B) {
+	var m storage.Monitor
+	var wg sync.WaitGroup
+
+	for i := 0; i < b.N; i++ {
+		CollectMonitorMetrics(1, &m, &wg)
+	}
+}
+
+func BenchmarkCollectGopsutilMetrics(b *testing.B) {
+	var m storage.Monitor
+	var wg sync.WaitGroup
+	storage.SetMetricsToMonitor(&m)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		CollectGopsutilMetrics(&m, &wg)
 	}
 }

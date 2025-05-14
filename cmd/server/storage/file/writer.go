@@ -31,6 +31,7 @@ func NewWriter(filename string) (*Writer, error) {
 	}, nil
 }
 
+// WriteMetricsToFile запись метрик в файл
 func WriteMetricsToFile(metrics *FStorage, filepath string) error {
 	Writer, err := NewWriter(filepath)
 	if err != nil {
@@ -47,6 +48,7 @@ func WriteMetricsToFile(metrics *FStorage, filepath string) error {
 	return nil
 }
 
+// WriteMetrics запись метрик
 func (w *Writer) WriteMetrics(metrics *FStorage) error {
 	data, err := json.Marshal(&metrics)
 	if err != nil {
@@ -71,6 +73,7 @@ func (w *Writer) WriteMetrics(metrics *FStorage) error {
 	return nil
 }
 
+// Close закрытие соединения с файлом
 func (w *Writer) Close() error {
 	err := w.file.Close()
 	if err != nil {

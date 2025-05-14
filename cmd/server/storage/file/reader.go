@@ -71,6 +71,7 @@ func (r *Reader) ReadMetrics() (*FStorage, error) {
 	return &metrics, nil
 }
 
+// Close закрытие соединения с файлом
 func (r *Reader) Close() error {
 	// закрываем файл
 	err := r.file.Close()

@@ -6,7 +6,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ramil063/gometrics/cmd/server/storage/db/dml/mocks"
+	db "github.com/ramil063/gometrics/cmd/server/storage/db/dml/mocks"
 )
 
 func TestCheckPing(t *testing.T) {

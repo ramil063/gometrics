@@ -1,3 +1,4 @@
+// Package writers осуществляется работа с хешем
 package writers
 
 import (

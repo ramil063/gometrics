@@ -7,14 +7,15 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"github.com/ramil063/gometrics/cmd/server/storage/db"
 	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
+	"github.com/ramil063/gometrics/internal/models"
 )
 
 func Test_update(t *testing.T) {
@@ -32,7 +33,7 @@ func Test_update(t *testing.T) {
 			w := httptest.NewRecorder()
 			updateHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
 				ms := NewMemStorage()
-				update(rw, req, ms)
+				Update(rw, req, ms)
 			}
 			handlerToTest := http.HandlerFunc(updateHandlerFunction)
 			handlerToTest.ServeHTTP(w, request)
@@ -183,7 +184,7 @@ func TestNewMemStorage(t *testing.T) {
 func Test_updateMetricsJSON(t *testing.T) {
 	handlers.Restore = false
 	updateMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
-		updateMetricsJSON(rw, req, NewMemStorage())
+		UpdateMetricsJSON(rw, req, NewMemStorage())
 	}
 	handler := http.HandlerFunc(updateMetricsJSONHandlerFunction)
 	srv := httptest.NewServer(handler)
@@ -241,7 +242,7 @@ func Test_getValueMetricsJSON(t *testing.T) {
 	getValueMetricsJSONHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
 		s := GetStorage("", "")
 		_ = s.SetGauge("met1", 1.1)
-		getValueMetricsJSON(rw, req, s)
+		GetValueMetricsJSON(rw, req, s)
 	}
 	handler := http.HandlerFunc(getValueMetricsJSONHandlerFunction)
 	srv := httptest.NewServer(handler)
@@ -306,7 +307,7 @@ func Test_updates(t *testing.T) {
 
 	updatesHandlerFunction := func(rw http.ResponseWriter, req *http.Request) {
 		s := &db.Storage{}
-		updates(rw, req, s)
+		Updates(rw, req, s)
 	}
 	handler := http.HandlerFunc(updatesHandlerFunction)
 	srv := httptest.NewServer(handler)
@@ -353,5 +354,59 @@ func Test_updates(t *testing.T) {
 				assert.JSONEq(t, tc.expectedBody, string(resp.Body()))
 			}
 		})
+	}
+}
+
+func Test_updateMetrics(t *testing.T) {
+	dbs := NewMemStorage()
+
+	tests := []struct {
+		name    string
+		metrics []models.Metrics
+		want    []models.Metrics
+		delta   int64
+	}{
+		{
+			name: "test 1",
+			metrics: []models.Metrics{
+				{
+					ID:    "met1",
+					MType: "counter",
+				},
+			},
+			want: []models.Metrics{
+				{
+					ID:    "met1",
+					MType: "counter",
+				},
+			},
+			delta: 1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.metrics[0].Delta = &tt.delta
+
+			got, err := UpdateMetrics(dbs, tt.metrics)
+			assert.NoError(t, err, "error making HTTP request")
+			assert.Equal(t, tt.want[0].ID, got[0].ID)
+			assert.Equal(t, tt.want[0].MType, got[0].MType)
+			assert.Equal(t, tt.delta, *(got[0].Delta))
+		})
+	}
+}
+
+func BenchmarkUpdateMetrics(b *testing.B) {
+	dbs := NewMemStorage()
+	metrics := []models.Metrics{
+		{
+			ID:    "met1",
+			MType: "counter",
+		},
+	}
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		_, _ = UpdateMetrics(dbs, metrics)
 	}
 }

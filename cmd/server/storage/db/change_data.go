@@ -8,6 +8,7 @@ import (
 	"github.com/ramil063/gometrics/internal/models"
 )
 
+// SetGauge создать или обновить метрику типа Gauge
 func (s *Storage) SetGauge(name string, value models.Gauge) error {
 	result, err := dml.CreateOrUpdateGauge(&dml.DBRepository, name, value)
 
@@ -32,6 +33,7 @@ func (s *Storage) SetGauge(name string, value models.Gauge) error {
 	return nil
 }
 
+// AddCounter создать или обновить метрику типа Counter
 func (s *Storage) AddCounter(name string, value models.Counter) error {
 	result, err := dml.CreateOrUpdateCounter(&dml.DBRepository, name, value)
 

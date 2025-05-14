@@ -2,15 +2,26 @@ package handlers
 
 import (
 	"flag"
+
 	"github.com/caarlos0/env/v6"
 )
 
+// MainURL основной урл на который нужно отправлять метрики
 var MainURL = "localhost:8080"
+
+// PollInterval с каким интервалом в секундах нужно собирать метрики
 var PollInterval = 2
+
+// ReportInterval с каким интервалом в секундах нужно отправлять данные на удаленный сервис
 var ReportInterval = 10
+
+// HashKey ключ для шифрования и дешифровки передаваемых данных
 var HashKey = ""
+
+// RateLimit количество одновременных запросов отправляемых на удаленный сервис
 var RateLimit = 1
 
+// EnvVars содержит переменные флагов
 type EnvVars struct {
 	Address        string `env:"ADDRESS"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
@@ -19,6 +30,7 @@ type EnvVars struct {
 	RateLimit      int    `env:"RATE_LIMIT"`
 }
 
+// ParseFlags парсит глобальные переменные системы, или парсит флаги, или подменяет их значениями по умолчанию
 func ParseFlags() {
 	flag.StringVar(&MainURL, "a", "localhost:8080", "address and port to run server")
 	flag.IntVar(&ReportInterval, "r", 10, "report interval in seconds")
