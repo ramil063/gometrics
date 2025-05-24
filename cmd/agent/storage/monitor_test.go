@@ -10,10 +10,13 @@ import (
 
 func TestNewMonitor(t *testing.T) {
 	tests := []struct {
-		name string
 		want *Monitor
+		name string
 	}{
-		{"check monitor", &Monitor{PollCount: 0}},
+		{
+			name: "check monitor",
+			want: &Monitor{PollCount: 0},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -28,10 +31,15 @@ func TestMonitor_InitCPUutilizationValue(t *testing.T) {
 		CPUutilization map[int]models.Gauge
 	}
 	tests := []struct {
-		name   string
 		fields fields
+		name   string
 	}{
-		{"test 1", fields{CPUutilization: map[int]models.Gauge{1: models.Gauge(1.1)}}},
+		{
+			name: "test 1",
+			fields: fields{
+				CPUutilization: map[int]models.Gauge{1: models.Gauge(1.1)},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -54,11 +62,15 @@ func TestMonitor_StoreCPUutilizationValue(t *testing.T) {
 		value models.Gauge
 	}
 	tests := []struct {
-		name   string
 		fields fields
+		name   string
 		args   args
 	}{
-		{"test 1", fields{CPUutilization: map[int]models.Gauge{1: models.Gauge(1.1)}}, args{key: 1, value: models.Gauge(2.2)}},
+		{
+			name:   "test 1",
+			fields: fields{CPUutilization: map[int]models.Gauge{1: models.Gauge(1.1)}},
+			args:   args{key: 1, value: models.Gauge(2.2)},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -76,11 +88,15 @@ func TestMonitor_GetAllCPUutilization(t *testing.T) {
 		CPUutilization map[int]models.Gauge
 	}
 	tests := []struct {
-		name   string
-		fields fields
 		want   map[int]models.Gauge
+		fields fields
+		name   string
 	}{
-		{"test 1", fields{CPUutilization: map[int]models.Gauge{1: models.Gauge(1.1)}}, map[int]models.Gauge{1: models.Gauge(1.1)}},
+		{
+			name:   "test 1",
+			want:   map[int]models.Gauge{1: models.Gauge(1.1)},
+			fields: fields{CPUutilization: map[int]models.Gauge{1: models.Gauge(1.1)}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

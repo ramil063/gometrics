@@ -12,12 +12,17 @@ func TestNewReader(t *testing.T) {
 	r, _ := NewReader(filename)
 
 	tests := []struct {
+		want     *Reader
 		name     string
 		filename string
-		want     *Reader
 		wantErr  bool
 	}{
-		{"test 1", filename, r, false},
+		{
+			want:     r,
+			name:     "test 1",
+			filename: filename,
+			wantErr:  false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

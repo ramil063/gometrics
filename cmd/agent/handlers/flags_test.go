@@ -15,9 +15,9 @@ func TestParseFlags(t *testing.T) {
 		args     []string
 		expected struct {
 			mainURL        string
+			hashKey        string
 			reportInterval int
 			pollInterval   int
-			hashKey        string
 			rateLimit      int
 		}
 	}{
@@ -27,15 +27,15 @@ func TestParseFlags(t *testing.T) {
 			args:    []string{},
 			expected: struct {
 				mainURL        string
+				hashKey        string
 				reportInterval int
 				pollInterval   int
-				hashKey        string
 				rateLimit      int
 			}{
 				mainURL:        "localhost:8080",
+				hashKey:        "",
 				reportInterval: 10,
 				pollInterval:   2,
-				hashKey:        "",
 				rateLimit:      1,
 			},
 		},
@@ -44,22 +44,22 @@ func TestParseFlags(t *testing.T) {
 			envVars: map[string]string{},
 			args: []string{
 				"-a", "localhost:9090",
+				"-k", "secret",
 				"-r", "20",
 				"-p", "5",
-				"-k", "secret",
 				"-l", "3",
 			},
 			expected: struct {
 				mainURL        string
+				hashKey        string
 				reportInterval int
 				pollInterval   int
-				hashKey        string
 				rateLimit      int
 			}{
 				mainURL:        "localhost:9090",
+				hashKey:        "secret",
 				reportInterval: 20,
 				pollInterval:   5,
-				hashKey:        "secret",
 				rateLimit:      3,
 			},
 		},
@@ -67,23 +67,23 @@ func TestParseFlags(t *testing.T) {
 			name: "env vars override defaults",
 			envVars: map[string]string{
 				"ADDRESS":         "localhost:7070",
+				"KEY":             "envkey",
 				"REPORT_INTERVAL": "15",
 				"POLL_INTERVAL":   "3",
-				"KEY":             "envkey",
 				"RATE_LIMIT":      "2",
 			},
 			args: []string{},
 			expected: struct {
 				mainURL        string
+				hashKey        string
 				reportInterval int
 				pollInterval   int
-				hashKey        string
 				rateLimit      int
 			}{
 				mainURL:        "localhost:7070",
+				hashKey:        "envkey",
 				reportInterval: 15,
 				pollInterval:   3,
-				hashKey:        "envkey",
 				rateLimit:      2,
 			},
 		},
@@ -105,17 +105,17 @@ func TestParseFlags(t *testing.T) {
 
 			// Reset global variables
 			MainURL = "localhost:8080"
+			HashKey = ""
 			ReportInterval = 10
 			PollInterval = 2
-			HashKey = ""
 			RateLimit = 1
 
 			ParseFlags()
 
 			assert.Equal(t, tt.expected.mainURL, MainURL)
+			assert.Equal(t, tt.expected.hashKey, HashKey)
 			assert.Equal(t, tt.expected.reportInterval, ReportInterval)
 			assert.Equal(t, tt.expected.pollInterval, PollInterval)
-			assert.Equal(t, tt.expected.hashKey, HashKey)
 			assert.Equal(t, tt.expected.rateLimit, RateLimit)
 		})
 	}

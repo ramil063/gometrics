@@ -16,8 +16,7 @@ import (
 )
 
 func main() {
-	var err error
-	if err = logger.Initialize(); err != nil {
+	if err := logger.Initialize(); err != nil {
 		panic(err)
 	}
 	handlers.ParseFlags()
@@ -43,7 +42,7 @@ func main() {
 	if handlers.StoreInterval > 0 && writingToFileIsEnabledAndAvailable {
 		if !handlers.Restore {
 			// работаем с новыми метриками, очищая файл со старыми
-			err = file.ClearFileContent(handlers.FileStoragePath)
+			err := file.ClearFileContent(handlers.FileStoragePath)
 			if err != nil {
 				logger.WriteErrorLog(err.Error(), "ClearFileContent")
 			}
@@ -53,8 +52,7 @@ func main() {
 			server.SaveMetricsPerTime(server.MaxSaverWorkTime, ticker, s)
 		}()
 	}
-
-	if err = http.ListenAndServe(handlers.MainURL, server.Router(s)); err != nil {
+	if err := http.ListenAndServe(handlers.MainURL, server.Router(s)); err != nil {
 		panic(err)
 	}
 }

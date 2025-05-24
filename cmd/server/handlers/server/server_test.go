@@ -94,18 +94,46 @@ func Test_getValue(t *testing.T) {
 	defer ts.Close()
 
 	type want struct {
-		code     int
 		response string
+		code     int
 	}
 	testsG := []struct {
 		name string
 		url  string
 		want want
 	}{
-		{"gauge test 1", "/value/gauge/a", want{200, ""}},
-		{"gauge test 2", "/value/gauge/a1", want{404, ""}},
-		{"gauge test 3", "/value/gauge/", want{404, ""}},
-		{"gauge test 4", "/value/gauge/testUnknown80", want{404, ""}},
+		{
+			name: "gauge test 1",
+			url:  "/value/gauge/a",
+			want: want{
+				code:     200,
+				response: "",
+			},
+		},
+		{
+			name: "gauge test 2",
+			url:  "/value/gauge/a1",
+			want: want{
+				code:     404,
+				response: "",
+			},
+		},
+		{
+			name: "gauge test 3",
+			url:  "/value/gauge/",
+			want: want{
+				code:     404,
+				response: "",
+			},
+		},
+		{
+			name: "gauge test 4",
+			url:  "/value/gauge/testUnknown80",
+			want: want{
+				code:     404,
+				response: "",
+			},
+		},
 	}
 	for _, test := range testsG {
 		t.Run(test.name, func(t *testing.T) {
@@ -121,9 +149,30 @@ func Test_getValue(t *testing.T) {
 		url  string
 		want want
 	}{
-		{"counter test 1", "/value/counter/a", want{200, ""}},
-		{"counter test 2", "/value/counter/a1", want{404, ""}},
-		{"counter test 3", "/value/counter/", want{404, ""}},
+		{
+			name: "counter test 1",
+			url:  "/value/counter/a",
+			want: want{
+				code:     200,
+				response: "",
+			},
+		},
+		{
+			name: "counter test 2",
+			url:  "/value/counter/a1",
+			want: want{
+				code:     404,
+				response: "",
+			},
+		},
+		{
+			name: "counter test 3",
+			url:  "/value/counter/",
+			want: want{
+				code:     404,
+				response: "",
+			},
+		},
 	}
 	for _, test := range testsC {
 		t.Run(test.name, func(t *testing.T) {
@@ -143,16 +192,24 @@ func Test_home(t *testing.T) {
 	defer ts.Close()
 
 	type want struct {
-		code        int
 		response    string
 		contentType string
+		code        int
 	}
 	tests := []struct {
 		name string
 		url  string
 		want want
 	}{
-		{"test 1", "/", want{200, "", "text/html"}},
+		{
+			name: "test 1",
+			url:  "/",
+			want: want{
+				code:        200,
+				response:    "",
+				contentType: "text/html",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -194,21 +251,21 @@ func Test_updateMetricsJSON(t *testing.T) {
 		name         string // добавляем название тестов
 		method       string
 		body         string // добавляем тело запроса в табличные тесты
-		expectedCode int
 		expectedBody string
+		expectedCode int
 	}{
 		{
 			name:         "test 1",
 			method:       http.MethodPost,
-			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
+			expectedCode: http.StatusInternalServerError,
 		},
 		{
 			name:         "test 2",
 			method:       http.MethodPost,
 			body:         `{"id": "met1", "type": "gauge", "value": 1.1}`,
-			expectedCode: http.StatusOK,
 			expectedBody: `{"id": "met1", "type": "gauge", "value": 1.1}`,
+			expectedCode: http.StatusOK,
 		},
 	}
 
@@ -252,21 +309,21 @@ func Test_getValueMetricsJSON(t *testing.T) {
 		name         string // добавляем название тестов
 		method       string
 		body         string // добавляем тело запроса в табличные тесты
-		expectedCode int
 		expectedBody string
+		expectedCode int
 	}{
 		{
 			name:         "test 1",
 			method:       http.MethodPost,
-			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
+			expectedCode: http.StatusInternalServerError,
 		},
 		{
 			name:         "test 2",
 			method:       http.MethodPost,
 			body:         `{"id": "met1", "type": "gauge", "value":1.1}`,
-			expectedCode: http.StatusOK,
 			expectedBody: `{"id": "met1", "type": "gauge", "value":1.1}`,
+			expectedCode: http.StatusOK,
 		},
 	}
 
@@ -317,14 +374,14 @@ func Test_updates(t *testing.T) {
 		name         string // добавляем название тестов
 		method       string
 		body         string // добавляем тело запроса в табличные тесты
-		expectedCode int
 		expectedBody string
+		expectedCode int
 	}{
 		{
 			name:         "test 1",
 			method:       http.MethodPost,
-			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
+			expectedCode: http.StatusInternalServerError,
 		},
 		{
 			name:         "test 2",

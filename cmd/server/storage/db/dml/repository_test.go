@@ -132,17 +132,16 @@ func TestRepository_PingContext(t *testing.T) {
 func TestRepository_SetDatabase(t *testing.T) {
 	// Setup test cases
 	tests := []struct {
-		name    string
 		dbr     *Repository
+		name    string
 		wantErr bool
 	}{
 		{
-			name:    "invalid connection",
 			dbr:     &Repository{},
+			name:    "invalid connection",
 			wantErr: true,
 		},
 	}
-
 	// Run test cases
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -157,4 +156,37 @@ func TestRepository_SetDatabase(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRepository_QueryRowContext(t *testing.T) {
+	db, _, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := &Repository{Database: db}
+
+	ctx := context.Background()
+	query := "SELECT 1"
+	args := []any{}
+
+	row := repo.QueryRowContext(ctx, query, args...)
+	assert.NotNil(t, row)
+}
+
+func TestRepository_QueryContext(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := &Repository{Database: db}
+
+	ctx := context.Background()
+	query := "SELECT 1"
+	args := "metric1"
+	rows := sqlmock.NewRows([]string{"value"}).AddRow("1")
+	mock.ExpectQuery("^SELECT *").WithArgs("metric1").WillReturnRows(rows)
+
+	row, err := repo.QueryContext(ctx, query, args)
+	assert.NotNil(t, row)
+	assert.NoError(t, err)
 }
