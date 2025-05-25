@@ -184,10 +184,10 @@ func TestRepository_QueryContext(t *testing.T) {
 	query := "SELECT 1"
 	args := "metric1"
 	rows := sqlmock.NewRows([]string{"value"}).AddRow("1")
-	mock.ExpectQuery("^SELECT *").WithArgs("metric1").WillReturnRows(rows)
-	assert.NoError(t, mock.ExpectationsWereMet())
+	mock.ExpectQuery("^SELECT *").WithArgs(args).WillReturnRows(rows)
 
 	row, errQueryContext := repo.QueryContext(ctx, query, args)
 	assert.NotNil(t, row)
 	assert.NoError(t, errQueryContext)
+	assert.NoError(t, mock.ExpectationsWereMet())
 }
