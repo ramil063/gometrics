@@ -19,10 +19,13 @@ func TestPrepareMetricsValues(t *testing.T) {
 		m:  storage.NewMonitor(),
 	}
 	tests := []struct {
-		name string
 		args args
+		name string
 	}{
-		{"test 1", a},
+		{
+			name: "test 1",
+			args: a,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -36,18 +39,21 @@ func TestPrepareMetricsValues(t *testing.T) {
 
 func TestSaveMetricsPerTime(t *testing.T) {
 	type args struct {
-		workTime int
 		ticker   *time.Ticker
+		workTime int
 	}
 	a := args{
-		workTime: 1,
 		ticker:   time.NewTicker(1 * time.Second),
+		workTime: 1,
 	}
 	tests := []struct {
-		name string
 		args args
+		name string
 	}{
-		{"test 1", a},
+		{
+			args: a,
+			name: "test 1",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

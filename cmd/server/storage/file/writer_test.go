@@ -10,11 +10,15 @@ import (
 func TestNewWriter(t *testing.T) {
 	filename := "../../../internal/storage/files/test.json"
 	tests := []struct {
+		want     *Writer
 		name     string
 		filename string
-		want     *Writer
 	}{
-		{"test 1", filename, &Writer{}},
+		{
+			name:     "test 1",
+			filename: filename,
+			want:     &Writer{},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

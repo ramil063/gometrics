@@ -66,10 +66,13 @@ func TestStorage_GetCounters(t *testing.T) {
 	mock.ExpectQuery("^SELECT name, value FROM counter").WithArgs().WillReturnRows(rows)
 
 	tests := []struct {
-		name string
 		want map[string]models.Counter
+		name string
 	}{
-		{"test 1", map[string]models.Counter{"metric1": 1, "metric2": 2}},
+		{
+			want: map[string]models.Counter{"metric1": 1, "metric2": 2},
+			name: "test 1",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -132,10 +135,13 @@ func TestStorage_GetGauges(t *testing.T) {
 	mock.ExpectQuery("^SELECT name, value FROM gauge").WillReturnRows(rows)
 
 	tests := []struct {
-		name string
 		want map[string]models.Gauge
+		name string
 	}{
-		{"test 1", map[string]models.Gauge{"metric1": 1.1, "metric2": 2.2}},
+		{
+			want: map[string]models.Gauge{"metric1": 1.1, "metric2": 2.2},
+			name: "test 1",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

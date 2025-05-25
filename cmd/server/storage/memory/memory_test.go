@@ -100,22 +100,22 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 		value models.Counter
 	}
 	tests := []struct {
-		name string
-		s    storage
-		args args
 		want map[string]models.Counter
+		s    storage
+		name string
+		args args
 	}{
 		{
-			"test 1",
-			storage{
+			want: map[string]models.Counter{"met1": 1},
+			s: storage{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
 			},
-			args{
+			name: "test 1",
+			args: args{
 				key:   "met1",
 				value: 1,
 			},
-			map[string]models.Counter{"met1": 1},
 		},
 	}
 	for _, tt := range tests {
@@ -141,22 +141,22 @@ func TestMemStorage_GetAllGauges(t *testing.T) {
 		value models.Gauge
 	}
 	tests := []struct {
-		name string
-		s    storage
-		args args
 		want map[string]models.Gauge
+		s    storage
+		name string
+		args args
 	}{
 		{
-			"test 1",
-			storage{
+			want: map[string]models.Gauge{"met1": 1.1},
+			s: storage{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
 			},
-			args{
+			name: "test 1",
+			args: args{
 				key:   "met1",
 				value: 1.1,
 			},
-			map[string]models.Gauge{"met1": 1.1},
 		},
 	}
 	for _, tt := range tests {
@@ -269,22 +269,22 @@ func TestMemStorage_GetCounters(t *testing.T) {
 		value models.Counter
 	}
 	tests := []struct {
+		want   map[string]models.Counter
 		name   string
 		fields fields
 		args   args
-		want   map[string]models.Counter
 	}{
 		{
-			"test 1",
-			fields{
+			want: map[string]models.Counter{"met1": 1},
+			fields: fields{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
 			},
-			args{
+			args: args{
 				key:   "met1",
 				value: models.Counter(1),
 			},
-			map[string]models.Counter{"met1": 1},
+			name: "test 1",
 		},
 	}
 	for _, tt := range tests {
@@ -393,17 +393,17 @@ func TestMemStorage_GetGauges(t *testing.T) {
 		Counters map[string]models.Counter
 	}
 	tests := []struct {
-		name string
-		f    fields
 		want map[string]models.Gauge
+		f    fields
+		name string
 	}{
 		{
-			"test 1",
-			fields{
+			want: map[string]models.Gauge{"met1": 1.1},
+			f: fields{
 				Gauges:   map[string]models.Gauge{"met1": 1.1},
 				Counters: map[string]models.Counter{},
 			},
-			map[string]models.Gauge{"met1": 1.1},
+			name: "test 1",
 		},
 	}
 	for _, tt := range tests {

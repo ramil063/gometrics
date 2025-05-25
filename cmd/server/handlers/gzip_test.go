@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"compress/gzip"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -57,18 +56,15 @@ func TestNewCompressWriter(t *testing.T) {
 }
 
 func Test_compressReader_Close(t *testing.T) {
-	type fields struct {
-		r  io.ReadCloser
-		zr *gzip.Reader
-	}
-	var f fields
 
 	tests := []struct {
 		name    string
-		fields  fields
 		wantErr bool
 	}{
-		{"test 1", f, false},
+		{
+			name:    "test 1",
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -127,10 +123,13 @@ func Test_compressWriter_Close(t *testing.T) {
 	var f fields
 	f.zw = gzip.NewWriter(bytes.NewBuffer(nil))
 	tests := []struct {
-		name   string
 		fields fields
+		name   string
 	}{
-		{"test 1", f},
+		{
+			name:   "test 1",
+			fields: f,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -154,11 +153,15 @@ func Test_compressWriter_Header(t *testing.T) {
 	}
 
 	tests := []struct {
-		name   string
-		fields fields
 		want   http.Header
+		fields fields
+		name   string
 	}{
-		{"tast 1", f, http.Header{}},
+		{
+			name:   "tast 1",
+			want:   http.Header{},
+			fields: f,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -224,11 +227,15 @@ func Test_compressWriter_WriteHeader(t *testing.T) {
 		statusCode int
 	}
 	tests := []struct {
-		name   string
 		fields fields
+		name   string
 		args   args
 	}{
-		{"test 1", f, args{statusCode: 200}},
+		{
+			name:   "test 1",
+			fields: f,
+			args:   args{statusCode: 200},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

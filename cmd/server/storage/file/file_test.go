@@ -114,10 +114,13 @@ func TestFStorage_GetCounters(t *testing.T) {
 		logger.WriteErrorLog("error write metrics", err.Error())
 	}
 	tests := []struct {
-		name string
 		want map[string]models.Counter
+		name string
 	}{
-		{"test 1", map[string]models.Counter{"met1": 1}},
+		{
+			want: map[string]models.Counter{"met1": 1},
+			name: "test 1",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -192,10 +195,13 @@ func TestFStorage_GetGauges(t *testing.T) {
 		logger.WriteErrorLog("error write metrics", err.Error())
 	}
 	tests := []struct {
-		name string
 		want map[string]models.Gauge
+		name string
 	}{
-		{"test 1", map[string]models.Gauge{"met1": 1.1}},
+		{
+			want: map[string]models.Gauge{"met1": 1.1},
+			name: "test 1",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -233,11 +239,18 @@ func TestFStorage_SetGauge(t *testing.T) {
 		value models.Gauge
 	}
 	tests := []struct {
+		want map[string]models.Gauge
 		name string
 		args args
-		want map[string]models.Gauge
 	}{
-		{"test 1", args{name: "met1", value: 1.1}, map[string]models.Gauge{"met1": 1.1}},
+		{
+			want: map[string]models.Gauge{"met1": 1.1},
+			name: "test 1",
+			args: args{
+				name:  "met1",
+				value: 1.1,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -344,22 +357,22 @@ func TestFStorage_GetAllGauges(t *testing.T) {
 		value models.Gauge
 	}
 	tests := []struct {
-		name string
-		s    storage
-		args args
 		want map[string]models.Gauge
+		s    storage
+		name string
+		args args
 	}{
 		{
-			"test 1",
-			storage{
+			want: map[string]models.Gauge{"met1": 1.1},
+			s: storage{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
 			},
-			args{
+			name: "test 1",
+			args: args{
 				key:   "met1",
 				value: 1.1,
 			},
-			map[string]models.Gauge{"met1": 1.1},
 		},
 	}
 	for _, tt := range tests {
@@ -467,22 +480,22 @@ func TestFStorage_GetAllCounters(t *testing.T) {
 		value models.Counter
 	}
 	tests := []struct {
-		name string
-		s    storage
-		args args
 		want map[string]models.Counter
+		s    storage
+		name string
+		args args
 	}{
 		{
-			"test 1",
-			storage{
+			want: map[string]models.Counter{"met1": 1},
+			s: storage{
 				Gauges:   map[string]models.Gauge{},
 				Counters: map[string]models.Counter{},
 			},
-			args{
+			name: "test 1",
+			args: args{
 				key:   "met1",
 				value: 1,
 			},
-			map[string]models.Counter{"met1": 1},
 		},
 	}
 	for _, tt := range tests {

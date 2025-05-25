@@ -42,10 +42,13 @@ func (c JSONClientMock) SendPostRequestWithBody(url string, body []byte) error {
 
 func TestNewRequest(t *testing.T) {
 	tests := []struct {
-		name string
 		want Requester
+		name string
 	}{
-		{"create new request", RequestMock{}.Request},
+		{
+			want: RequestMock{}.Request,
+			name: "create new request",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -115,11 +118,15 @@ func Test_client_SendPostRequest(t *testing.T) {
 		url string
 	}
 	tests := []struct {
-		name    string
-		args    args
 		wantErr assert.ErrorAssertionFunc
+		args    args
+		name    string
 	}{
-		{"send post", args{url: "http://" + MainURL + "/update/gauge/metric1/100"}, assert.NoError},
+		{
+			name:    "send post",
+			args:    args{url: "http://" + MainURL + "/update/gauge/metric1/100"},
+			wantErr: assert.NoError,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -136,11 +143,15 @@ func Test_client_SendPostRequestWithBody(t *testing.T) {
 	}
 	body, _ := json.Marshal(`{"id": "metric1", "type": "gauge", "value": 100.250}`)
 	tests := []struct {
+		wantErr assert.ErrorAssertionFunc
 		name    string
 		args    args
-		wantErr assert.ErrorAssertionFunc
 	}{
-		{"send post", args{url: "http://" + MainURL + "/update", body: body}, assert.NoError},
+		{
+			wantErr: assert.NoError,
+			name:    "send post",
+			args:    args{url: "http://" + MainURL + "/update", body: body},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

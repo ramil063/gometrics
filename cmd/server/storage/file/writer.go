@@ -56,12 +56,12 @@ func (w *Writer) WriteMetrics(metrics *FStorage) error {
 	}
 
 	// записываем событие в буфер
-	if _, err := w.writer.Write(data); err != nil {
+	if _, err = w.writer.Write(data); err != nil {
 		return errors.NewFileError(err)
 	}
 
 	// добавляем перенос строки
-	if err := w.writer.WriteByte('\n'); err != nil {
+	if err = w.writer.WriteByte('\n'); err != nil {
 		return errors.NewFileError(err)
 	}
 

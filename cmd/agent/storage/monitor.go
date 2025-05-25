@@ -16,6 +16,8 @@ import (
 
 // Monitor содержит все метрики
 type Monitor struct {
+	CPUutilization map[int]models.Gauge
+
 	Alloc,
 	BuckHashSys,
 	Frees,
@@ -43,12 +45,14 @@ type Monitor struct {
 	FreeMemory,
 	TotalAlloc uint64
 	GCCPUFraction float64
-	NumForcedGC,
-	NumGC uint32
-	PollCount      models.Counter
-	RandomValue    models.Gauge
-	CPUutilization map[int]models.Gauge
-	mx             sync.RWMutex
+
+	NumForcedGC uint32
+	NumGC       uint32
+
+	PollCount   models.Counter
+	RandomValue models.Gauge
+
+	mx sync.RWMutex
 }
 
 func NewMonitor() *Monitor {

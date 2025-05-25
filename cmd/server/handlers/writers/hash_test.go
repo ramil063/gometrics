@@ -36,10 +36,18 @@ func Test_hashWriter_CreateSha256(t *testing.T) {
 	var w http.ResponseWriter
 	tests := []struct {
 		name   string
-		fields fields
 		want   string
+		fields fields
 	}{
-		{"test1 ", fields{w: w, key: "test", body: []byte("test")}, "88cd2108b5347d973cf39cdf9053d7dd42704876d8c9a9bd8e2d168259d3ddf7"},
+		{
+			name: "test1",
+			want: "88cd2108b5347d973cf39cdf9053d7dd42704876d8c9a9bd8e2d168259d3ddf7",
+			fields: fields{
+				w:    w,
+				key:  "test",
+				body: []byte("test"),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -66,11 +74,15 @@ func Test_hashWriter_Header(t *testing.T) {
 	}
 
 	tests := []struct {
+		want   http.Header
 		name   string
 		fields fields
-		want   http.Header
 	}{
-		{"tast 1", f, http.Header{}},
+		{
+			want:   http.Header{},
+			name:   "tast 1",
+			fields: f,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -129,11 +141,16 @@ func Test_hashWriter_WriteHeader(t *testing.T) {
 	}
 	tests := []struct {
 		name       string
+		wantHeader string
 		fields     fields
 		args       args
-		wantHeader string
 	}{
-		{"test 1", fields{w: w, key: "test", body: []byte("test")}, args{http.StatusOK}, "88cd2108b5347d973cf39cdf9053d7dd42704876d8c9a9bd8e2d168259d3ddf7"},
+		{
+			name:       "test 1",
+			wantHeader: "88cd2108b5347d973cf39cdf9053d7dd42704876d8c9a9bd8e2d168259d3ddf7",
+			fields:     fields{w: w, key: "test", body: []byte("test")},
+			args:       args{http.StatusOK},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
