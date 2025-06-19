@@ -11,8 +11,8 @@ func TestClearFileContent(t *testing.T) {
 	tempDir := t.TempDir()
 
 	tests := []struct {
-		name          string
 		setup         func() string // Функция подготовки теста (возвращает путь к файлу)
+		name          string
 		expectedError bool
 	}{
 		{
