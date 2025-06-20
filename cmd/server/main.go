@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	_ "net/http/pprof"
 	"time"
@@ -15,12 +16,21 @@ import (
 	"github.com/ramil063/gometrics/internal/logger"
 )
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
 func main() {
-	var err error
-	if err = logger.Initialize(); err != nil {
+	if err := logger.Initialize(); err != nil {
 		panic(err)
 	}
 	handlers.ParseFlags()
+
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
 
 	var s = server.GetStorage(handlers.FileStoragePath, handlers.DatabaseDSN)
 
@@ -43,7 +53,7 @@ func main() {
 	if handlers.StoreInterval > 0 && writingToFileIsEnabledAndAvailable {
 		if !handlers.Restore {
 			// работаем с новыми метриками, очищая файл со старыми
-			err = file.ClearFileContent(handlers.FileStoragePath)
+			err := file.ClearFileContent(handlers.FileStoragePath)
 			if err != nil {
 				logger.WriteErrorLog(err.Error(), "ClearFileContent")
 			}
@@ -53,8 +63,7 @@ func main() {
 			server.SaveMetricsPerTime(server.MaxSaverWorkTime, ticker, s)
 		}()
 	}
-
-	if err = http.ListenAndServe(handlers.MainURL, server.Router(s)); err != nil {
+	if err := http.ListenAndServe(handlers.MainURL, server.Router(s)); err != nil {
 		panic(err)
 	}
 }

@@ -21,8 +21,8 @@ import (
 
 func TestCheckMethodMw(t *testing.T) {
 	type want struct {
-		code        int
 		contentType string
+		code        int
 	}
 	tests := []struct {
 		name        string
@@ -30,9 +30,33 @@ func TestCheckMethodMw(t *testing.T) {
 		contentType string
 		want        want
 	}{
-		{"test 1", http.MethodGet, "text-plain", want{200, "text/plain; charset=utf-8"}},
-		{"test 2", http.MethodPost, "application/json", want{200, "text/plain; charset=utf-8"}},
-		{"test 3", http.MethodPost, "text/plain", want{200, "text/plain; charset=utf-8"}},
+		{
+			name:        "test 1",
+			method:      http.MethodGet,
+			contentType: "text-plain",
+			want: want{
+				contentType: "text/plain; charset=utf-8",
+				code:        http.StatusOK,
+			},
+		},
+		{
+			name:        "test 2",
+			method:      http.MethodPost,
+			contentType: "application/json",
+			want: want{
+				contentType: "text/plain; charset=utf-8",
+				code:        http.StatusOK,
+			},
+		},
+		{
+			name:        "test 3",
+			method:      http.MethodPost,
+			contentType: "text/plain",
+			want: want{
+				contentType: "text/plain; charset=utf-8",
+				code:        http.StatusOK,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -65,17 +89,33 @@ func TestCheckMethodMw(t *testing.T) {
 
 func TestCheckUpdateMetricsValue(t *testing.T) {
 	type want struct {
-		code        int
 		response    string
 		contentType string
+		code        int
 	}
 	tests := []struct {
 		name       string
 		pathValues map[string]string
 		want       want
 	}{
-		{"test 1", map[string]string{"type": "gauge", "metric": "a", "value": "1"}, want{http.StatusOK, "", "text/plain; charset=utf-8"}},
-		{"test 2", map[string]string{"type": "gauge", "metric": "a"}, want{http.StatusBadRequest, "", ""}},
+		{
+			name:       "test 1",
+			pathValues: map[string]string{"type": "gauge", "metric": "a", "value": "1"},
+			want: want{
+				response:    "",
+				contentType: "text/plain; charset=utf-8",
+				code:        http.StatusOK,
+			},
+		},
+		{
+			name:       "test 2",
+			pathValues: map[string]string{"type": "gauge", "metric": "a"},
+			want: want{
+				response:    "",
+				contentType: "",
+				code:        http.StatusBadRequest,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -114,19 +154,51 @@ func TestCheckUpdateMetricsValue(t *testing.T) {
 
 func TestCheckValueMetricsMw(t *testing.T) {
 	type want struct {
-		code        int
 		response    string
 		contentType string
+		code        int
 	}
 	tests := []struct {
 		name       string
 		pathValues map[string]string
 		want       want
 	}{
-		{"test 1", map[string]string{"type": "gauge", "metric": "a"}, want{http.StatusOK, "", "text/plain; charset=utf-8"}},
-		{"test 2", map[string]string{"type": "gauge1", "metric": "a"}, want{http.StatusBadRequest, "", ""}},
-		{"test 4", map[string]string{"type": "counter"}, want{http.StatusNotFound, "", ""}},
-		{"test 4", map[string]string{"type": "counter", "metric": "a"}, want{http.StatusOK, "", "text/plain; charset=utf-8"}},
+		{
+			name:       "test 1",
+			pathValues: map[string]string{"type": "gauge", "metric": "a"},
+			want: want{
+				response:    "",
+				contentType: "text/plain; charset=utf-8",
+				code:        http.StatusOK,
+			},
+		},
+		{
+			name:       "test 2",
+			pathValues: map[string]string{"type": "gauge1", "metric": "a"},
+			want: want{
+				response:    "",
+				contentType: "",
+				code:        http.StatusBadRequest,
+			},
+		},
+		{
+			name:       "test 3",
+			pathValues: map[string]string{"type": "counter"},
+			want: want{
+				response:    "",
+				contentType: "",
+				code:        http.StatusNotFound,
+			},
+		},
+		{
+			name:       "test 4",
+			pathValues: map[string]string{"type": "counter", "metric": "a"},
+			want: want{
+				response:    "",
+				contentType: "text/plain; charset=utf-8",
+				code:        http.StatusOK,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -164,18 +236,42 @@ func TestCheckValueMetricsMw(t *testing.T) {
 
 func TestCheckUpdateMetricsNameMw(t *testing.T) {
 	type want struct {
-		code        int
 		response    string
 		contentType string
+		code        int
 	}
 	tests := []struct {
 		name       string
 		pathValues map[string]string
 		want       want
 	}{
-		{"test 1", map[string]string{"type": "gauge", "metric": "a"}, want{http.StatusOK, "", "text/plain; charset=utf-8"}},
-		{"test 4", map[string]string{"type": "counter"}, want{http.StatusBadRequest, "", ""}},
-		{"test 4", map[string]string{"type": "counter", "metric": "a"}, want{http.StatusOK, "", "text/plain; charset=utf-8"}},
+		{
+			name:       "test 1",
+			pathValues: map[string]string{"type": "gauge", "metric": "a"},
+			want: want{
+				response:    "",
+				contentType: "text/plain; charset=utf-8",
+				code:        http.StatusOK,
+			},
+		},
+		{
+			name:       "test 4",
+			pathValues: map[string]string{"type": "counter"},
+			want: want{
+				response:    "",
+				contentType: "",
+				code:        http.StatusBadRequest,
+			},
+		},
+		{
+			name:       "test 4",
+			pathValues: map[string]string{"type": "counter", "metric": "a"},
+			want: want{
+				response:    "",
+				contentType: "text/plain; charset=utf-8",
+				code:        http.StatusOK,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -213,18 +309,42 @@ func TestCheckUpdateMetricsNameMw(t *testing.T) {
 
 func TestCheckMetricsTypeMw(t *testing.T) {
 	type want struct {
-		code        int
 		response    string
 		contentType string
+		code        int
 	}
 	tests := []struct {
 		name       string
 		pathValues map[string]string
 		want       want
 	}{
-		{"test 1", map[string]string{"type": "gauge", "metric": "a"}, want{http.StatusOK, "", "text/plain; charset=utf-8"}},
-		{"test 4", map[string]string{"type": "counter1", "metric": "a"}, want{http.StatusBadRequest, "", ""}},
-		{"test 4", map[string]string{"type": "counter", "metric": "a"}, want{http.StatusOK, "", "text/plain; charset=utf-8"}},
+		{
+			name:       "test 1",
+			pathValues: map[string]string{"type": "gauge", "metric": "a"},
+			want: want{
+				response:    "",
+				contentType: "text/plain; charset=utf-8",
+				code:        http.StatusOK,
+			},
+		},
+		{
+			name:       "test 2",
+			pathValues: map[string]string{"type": "counter1", "metric": "a"},
+			want: want{
+				response:    "",
+				contentType: "",
+				code:        http.StatusBadRequest,
+			},
+		},
+		{
+			name:       "test 3",
+			pathValues: map[string]string{"type": "counter", "metric": "a"},
+			want: want{
+				response:    "",
+				contentType: "text/plain; charset=utf-8",
+				code:        http.StatusOK,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -269,31 +389,31 @@ func TestCheckPostMethodMw(t *testing.T) {
 	defer srv.Close()
 
 	testCases := []struct {
-		name         string // добавляем название тестов
-		method       string
 		body         models.Metrics // добавляем тело запроса в табличные тесты
-		expectedCode int
+		name         string         // добавляем название тестов
+		method       string
 		expectedBody string
+		expectedCode int
 	}{
 		{
+			expectedBody: "",
 			name:         "test 1",
 			method:       http.MethodGet,
 			expectedCode: http.StatusMethodNotAllowed,
-			expectedBody: "",
 		},
 		{
+			body:         models.Metrics{ID: "metric1", MType: "gauge", Delta: nil, Value: nil},
 			name:         "test 2",
 			method:       http.MethodPost,
-			body:         models.Metrics{ID: "metric1", MType: "gauge", Delta: nil, Value: nil},
-			expectedCode: http.StatusOK,
 			expectedBody: "",
+			expectedCode: http.StatusOK,
 		},
 		{
+			body:         models.Metrics{ID: "metric2", MType: "counter", Delta: nil, Value: nil},
 			name:         "test 3",
 			method:       http.MethodPost,
-			body:         models.Metrics{ID: "metric2", MType: "counter", Delta: nil, Value: nil},
-			expectedCode: http.StatusOK,
 			expectedBody: "",
+			expectedCode: http.StatusOK,
 		},
 	}
 
@@ -420,25 +540,25 @@ func TestCheckHashMiddleware(t *testing.T) {
 	handlers.HashKey = "test"
 
 	testCases := []struct {
-		name         string // добавляем название тестов
-		method       string
 		body         models.Metrics // добавляем тело запроса в табличные тесты
-		expectedCode int
+		name         string         // добавляем название тестов
+		method       string
 		expectedBody string
+		expectedCode int
 	}{
 		{
+			body:         models.Metrics{ID: "metric1", MType: "gauge", Delta: nil, Value: nil},
 			name:         "test 1",
 			method:       http.MethodPost,
-			body:         models.Metrics{ID: "metric1", MType: "gauge", Delta: nil, Value: nil},
-			expectedCode: http.StatusOK,
 			expectedBody: "",
+			expectedCode: http.StatusOK,
 		},
 		{
+			body:         models.Metrics{ID: "metric2", MType: "counter", Delta: nil, Value: nil},
 			name:         "test 2",
 			method:       http.MethodPost,
-			body:         models.Metrics{ID: "metric2", MType: "counter", Delta: nil, Value: nil},
-			expectedCode: http.StatusOK,
 			expectedBody: "",
+			expectedCode: http.StatusOK,
 		},
 	}
 

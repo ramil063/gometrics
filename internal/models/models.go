@@ -1,3 +1,4 @@
+// Package models пакет с моделями
 package models
 
 type Gauge float64
