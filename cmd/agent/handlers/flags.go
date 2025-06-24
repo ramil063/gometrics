@@ -21,10 +21,14 @@ var HashKey = ""
 // RateLimit количество одновременных запросов отправляемых на удаленный сервис
 var RateLimit = 1
 
+// CryptoKey путь до публичного ключа шифрования
+var CryptoKey = ""
+
 // EnvVars содержит переменные флагов
 type EnvVars struct {
 	Address        string `env:"ADDRESS"`
 	HashKey        string `env:"KEY"`
+	CryptoKey      string `env:"CRYPTO_KEY"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	PollInterval   int    `env:"POLL_INTERVAL"`
 	RateLimit      int    `env:"RATE_LIMIT"`
@@ -37,6 +41,7 @@ func ParseFlags() {
 	flag.IntVar(&PollInterval, "p", 2, "poll interval in seconds")
 	flag.StringVar(&HashKey, "k", "", "key for hash")
 	flag.IntVar(&RateLimit, "l", 1, "limit requests")
+	flag.StringVar(&CryptoKey, "crypto-key", "", "key for encryption")
 	flag.Parse()
 
 	var ev EnvVars
@@ -56,5 +61,8 @@ func ParseFlags() {
 	}
 	if ev.RateLimit != 0 {
 		RateLimit = ev.RateLimit
+	}
+	if ev.CryptoKey != "" {
+		CryptoKey = ev.CryptoKey
 	}
 }

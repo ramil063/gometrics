@@ -12,6 +12,7 @@ import (
 	"github.com/ramil063/gometrics/cmd/server/handlers/writers"
 	"github.com/ramil063/gometrics/internal/hash"
 	"github.com/ramil063/gometrics/internal/logger"
+	"github.com/ramil063/gometrics/internal/security/crypto"
 )
 
 // CheckMethodMw middleware для проверки метода запроса
@@ -217,6 +218,36 @@ func CheckHashMiddleware(next http.Handler) http.Handler {
 			w = hw
 		}
 		// передаём управление хендлеру
+		next.ServeHTTP(w, r)
+	})
+}
+
+// DecryptMiddleware расшифровка с помощью приватного ключа
+func DecryptMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if crypto.DefaultDecryptor == nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+		// Читаем зашифрованные данные из тела запроса
+		encrypted, err := io.ReadAll(r.Body)
+		if err != nil {
+			logger.WriteErrorLog("ReadAll body isn't correct", "Body")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		decrypted, err := crypto.DefaultDecryptor.Decrypt(encrypted)
+		if err != nil {
+			logger.WriteErrorLog("Decrypting error", "Decryptor")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// Подменяем тело запроса на дешифрованные данные
+		r.Body = io.NopCloser(bytes.NewReader(decrypted))
+		r.ContentLength = int64(len(decrypted))
+
 		next.ServeHTTP(w, r)
 	})
 }

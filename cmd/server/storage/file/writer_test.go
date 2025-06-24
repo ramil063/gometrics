@@ -46,23 +46,3 @@ func TestWriter_Close(t *testing.T) {
 		})
 	}
 }
-
-func TestWriter_WriteMonitor(t *testing.T) {
-	filename := "../../../internal/storage/files/test.json"
-
-	tests := []struct {
-		name     string
-		filename string
-	}{
-		{"test 1", filename},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			//w, err := NewWriter(tt.filename)
-			//assert.NoError(t, err, "Error New Writer")
-			//var m = storage.NewMonitor()
-			//err = w.WriteMetrics(&m)
-			//assert.NoError(t, err, "Error WriteMetrics")
-		})
-	}
-}

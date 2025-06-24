@@ -14,6 +14,7 @@ import (
 	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"github.com/ramil063/gometrics/cmd/server/storage/file"
 	"github.com/ramil063/gometrics/internal/logger"
+	"github.com/ramil063/gometrics/internal/security/crypto"
 )
 
 var (
@@ -27,6 +28,14 @@ func main() {
 		panic(err)
 	}
 	handlers.ParseFlags()
+
+	if handlers.CryptoKey != "" {
+		var err error
+		crypto.DefaultDecryptor, err = crypto.NewRSADecryptor(handlers.CryptoKey)
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "Failed to create decryptor")
+		}
+	}
 
 	fmt.Printf("Build version: %s\n", buildVersion)
 	fmt.Printf("Build date: %s\n", buildDate)
