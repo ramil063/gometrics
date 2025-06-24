@@ -24,12 +24,16 @@ var DatabaseDSN = ""
 // HashKey ключ для декодирования зашифрованных данных
 var HashKey = ""
 
+// CryptoKey путь до приватного ключа шифрования
+var CryptoKey = ""
+
 // EnvVars содержит переменные флагов
 type EnvVars struct {
 	Address         string `env:"ADDRESS"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
 	HashKey         string `env:"KEY"`
+	CryptoKey       string `env:"CRYPTO_KEY"`
 	StoreInterval   int    `env:"STORE_INTERVAL"`
 	Restore         bool   `env:"RESTORE"`
 }
@@ -42,6 +46,7 @@ func ParseFlags() {
 	flag.StringVar(&FileStoragePath, "f", "internal/storage/files/metrics.json", "file storage path")
 	flag.BoolVar(&Restore, "r", true, "file storage path")
 	flag.StringVar(&HashKey, "k", "", "key for hash")
+	flag.StringVar(&CryptoKey, "crypto-key", "", "key for encryption")
 	flag.Parse()
 
 	var ev EnvVars
@@ -70,6 +75,10 @@ func ParseFlags() {
 
 	if ev.HashKey != "" {
 		HashKey = ev.HashKey
+	}
+
+	if ev.CryptoKey != "" {
+		CryptoKey = ev.CryptoKey
 	}
 
 	//only for autotests

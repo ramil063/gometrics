@@ -24,6 +24,7 @@ func TestParseFlags(t *testing.T) {
 				Restore:         false,
 				DatabaseDSN:     "",
 				HashKey:         "",
+				CryptoKey:       "",
 			},
 		},
 	}
@@ -64,6 +65,7 @@ func TestParseFlags(t *testing.T) {
 			assert.Equal(t, tt.expected.Restore, Restore)
 			assert.Equal(t, tt.expected.DatabaseDSN, DatabaseDSN)
 			assert.Equal(t, tt.expected.HashKey, HashKey)
+			assert.Equal(t, tt.expected.CryptoKey, CryptoKey)
 		})
 	}
 }

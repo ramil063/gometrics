@@ -17,6 +17,7 @@ import (
 	"github.com/ramil063/gometrics/cmd/server/storage/memory"
 	"github.com/ramil063/gometrics/internal/hash"
 	"github.com/ramil063/gometrics/internal/models"
+	"github.com/ramil063/gometrics/internal/security/crypto"
 )
 
 func TestCheckMethodMw(t *testing.T) {
@@ -580,6 +581,95 @@ func TestCheckHashMiddleware(t *testing.T) {
 			assert.Equal(t, tc.expectedCode, res.StatusCode, "Response code didn't match expected")
 
 			defer res.Body.Close()
+		})
+	}
+}
+
+// MockDecryptor реализует интерфейс Decryptor для тестов
+type MockDecryptor struct {
+	decryptFunc func([]byte) ([]byte, error)
+}
+
+func (m *MockDecryptor) Decrypt(data []byte) ([]byte, error) {
+	return m.decryptFunc(data)
+}
+
+func TestDecryptMiddleware(t *testing.T) {
+	// Сохраняем оригинальный decryptor и восстанавливаем после теста
+	originalDecryptor := crypto.DefaultDecryptor
+	defer func() {
+		crypto.DefaultDecryptor = originalDecryptor
+	}()
+
+	tests := []struct {
+		name              string
+		expectedBody      string
+		decryptor         crypto.Decryptor
+		requestBody       []byte
+		expectedStatus    int
+		expectNextHandler bool
+	}{
+		{
+			name:              "No decryptor - pass through",
+			expectedBody:      "original",
+			decryptor:         nil,
+			requestBody:       []byte("original"),
+			expectedStatus:    http.StatusOK,
+			expectNextHandler: true,
+		},
+		{
+			name:         "Successful decryption",
+			expectedBody: "decrypted",
+			decryptor: &MockDecryptor{
+				decryptFunc: func(data []byte) ([]byte, error) {
+					return []byte("decrypted"), nil
+				},
+			},
+			requestBody:       []byte("encrypted"),
+			expectedStatus:    http.StatusOK,
+			expectNextHandler: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			crypto.DefaultDecryptor = tt.decryptor
+
+			body := bytes.NewReader(tt.requestBody)
+
+			req, err := http.NewRequest("POST", "/", body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			nextHandlerCalled := false
+			nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				nextHandlerCalled = true
+				body, err := io.ReadAll(r.Body)
+				if err != nil {
+					t.Fatal(err)
+				}
+				w.Write(body)
+			})
+
+			rr := httptest.NewRecorder()
+			middleware := DecryptMiddleware(nextHandler)
+			middleware.ServeHTTP(rr, req)
+
+			if status := rr.Code; status != tt.expectedStatus {
+				t.Errorf("handler returned wrong status code: got %v want %v",
+					status, tt.expectedStatus)
+			}
+
+			if tt.expectNextHandler != nextHandlerCalled {
+				t.Errorf("next handler called: got %v want %v",
+					nextHandlerCalled, tt.expectNextHandler)
+			}
+
+			if tt.expectedBody != "" && rr.Body.String() != tt.expectedBody {
+				t.Errorf("unexpected body: got %v want %v",
+					rr.Body.String(), tt.expectedBody)
+			}
 		})
 	}
 }

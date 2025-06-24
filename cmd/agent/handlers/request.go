@@ -19,6 +19,7 @@ import (
 	"github.com/ramil063/gometrics/internal/hash"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
+	"github.com/ramil063/gometrics/internal/security/crypto"
 )
 
 // JSONRequester отправляет данные в формате json
@@ -82,10 +83,21 @@ func (c client) SendPostRequest(url string) error {
 
 // SendPostRequestWithBody отправляет пост запроса с телом
 func (c client) SendPostRequestWithBody(url string, body []byte) error {
-	data, err := compressData(body)
+	var err error
+	data := body
+
+	if crypto.DefaultEncryptor != nil {
+		data, err = crypto.DefaultEncryptor.Encrypt(data)
+		if err != nil {
+			return err
+		}
+	}
+
+	data, err = compressData(data)
 	if err != nil {
 		return err
 	}
+
 	req, _ := http.NewRequest("POST", url, bytes.NewReader(data))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
@@ -101,6 +113,7 @@ func (c client) SendPostRequestWithBody(url string, body []byte) error {
 		return err
 	}
 	defer res.Body.Close()
+
 	var b []byte
 	res.Body.Read(b)
 	if res.StatusCode != http.StatusOK {
