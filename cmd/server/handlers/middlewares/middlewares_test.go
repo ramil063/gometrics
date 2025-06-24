@@ -635,8 +635,7 @@ func TestDecryptMiddleware(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			crypto.DefaultDecryptor = tt.decryptor
 
-			var body io.Reader
-			body = bytes.NewReader(tt.requestBody)
+			body := bytes.NewReader(tt.requestBody)
 
 			req, err := http.NewRequest("POST", "/", body)
 			if err != nil {
