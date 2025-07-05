@@ -5,10 +5,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ramil063/gometrics/cmd/agent/config"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseFlags(t *testing.T) {
+func TestInitFlags(t *testing.T) {
 	tests := []struct {
 		name     string
 		envVars  map[string]string
@@ -120,7 +121,8 @@ func TestParseFlags(t *testing.T) {
 			RateLimit = 1
 			CryptoKey = ""
 
-			ParseFlags()
+			configMock := config.AgentConfig{}
+			InitFlags(&configMock)
 
 			assert.Equal(t, tt.expected.mainURL, MainURL)
 			assert.Equal(t, tt.expected.hashKey, HashKey)

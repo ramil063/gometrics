@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	serverConfig "github.com/ramil063/gometrics/cmd/server/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,8 +57,8 @@ func TestParseFlags(t *testing.T) {
 				}
 				os.Setenv(k, v)
 			}
-
-			ParseFlags()
+			config := serverConfig.ServerConfig{}
+			InitFlags(&config)
 
 			assert.Equal(t, tt.expected.Address, MainURL)
 			assert.Equal(t, tt.expected.StoreInterval, StoreInterval)

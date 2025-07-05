@@ -8,6 +8,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
+	serverConfig "github.com/ramil063/gometrics/cmd/server/config"
 	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"github.com/ramil063/gometrics/cmd/server/handlers/server"
 	"github.com/ramil063/gometrics/cmd/server/storage/db"
@@ -27,7 +28,12 @@ func main() {
 	if err := logger.Initialize(); err != nil {
 		panic(err)
 	}
-	handlers.ParseFlags()
+
+	config, err := serverConfig.GetConfig()
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "config")
+	}
+	handlers.InitFlags(config)
 
 	if handlers.CryptoKey != "" {
 		var err error
