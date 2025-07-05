@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	serverConfig "github.com/ramil063/gometrics/cmd/server/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,6 +25,7 @@ func TestParseFlags(t *testing.T) {
 				Restore:         false,
 				DatabaseDSN:     "",
 				HashKey:         "",
+				CryptoKey:       "",
 			},
 		},
 	}
@@ -55,8 +57,8 @@ func TestParseFlags(t *testing.T) {
 				}
 				os.Setenv(k, v)
 			}
-
-			ParseFlags()
+			config := serverConfig.ServerConfig{}
+			InitFlags(&config)
 
 			assert.Equal(t, tt.expected.Address, MainURL)
 			assert.Equal(t, tt.expected.StoreInterval, StoreInterval)
@@ -64,6 +66,7 @@ func TestParseFlags(t *testing.T) {
 			assert.Equal(t, tt.expected.Restore, Restore)
 			assert.Equal(t, tt.expected.DatabaseDSN, DatabaseDSN)
 			assert.Equal(t, tt.expected.HashKey, HashKey)
+			assert.Equal(t, tt.expected.CryptoKey, CryptoKey)
 		})
 	}
 }

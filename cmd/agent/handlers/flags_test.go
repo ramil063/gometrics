@@ -5,10 +5,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ramil063/gometrics/cmd/agent/config"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseFlags(t *testing.T) {
+func TestInitFlags(t *testing.T) {
 	tests := []struct {
 		name     string
 		envVars  map[string]string
@@ -16,6 +17,7 @@ func TestParseFlags(t *testing.T) {
 		expected struct {
 			mainURL        string
 			hashKey        string
+			cryptoKey      string
 			reportInterval int
 			pollInterval   int
 			rateLimit      int
@@ -28,6 +30,7 @@ func TestParseFlags(t *testing.T) {
 			expected: struct {
 				mainURL        string
 				hashKey        string
+				cryptoKey      string
 				reportInterval int
 				pollInterval   int
 				rateLimit      int
@@ -37,6 +40,7 @@ func TestParseFlags(t *testing.T) {
 				reportInterval: 10,
 				pollInterval:   2,
 				rateLimit:      1,
+				cryptoKey:      "",
 			},
 		},
 		{
@@ -48,10 +52,12 @@ func TestParseFlags(t *testing.T) {
 				"-r", "20",
 				"-p", "5",
 				"-l", "3",
+				"-crypto-key", "secret",
 			},
 			expected: struct {
 				mainURL        string
 				hashKey        string
+				cryptoKey      string
 				reportInterval int
 				pollInterval   int
 				rateLimit      int
@@ -61,6 +67,7 @@ func TestParseFlags(t *testing.T) {
 				reportInterval: 20,
 				pollInterval:   5,
 				rateLimit:      3,
+				cryptoKey:      "secret",
 			},
 		},
 		{
@@ -71,11 +78,13 @@ func TestParseFlags(t *testing.T) {
 				"REPORT_INTERVAL": "15",
 				"POLL_INTERVAL":   "3",
 				"RATE_LIMIT":      "2",
+				"CRYPTO_KEY":      "envkey",
 			},
 			args: []string{},
 			expected: struct {
 				mainURL        string
 				hashKey        string
+				cryptoKey      string
 				reportInterval int
 				pollInterval   int
 				rateLimit      int
@@ -85,6 +94,7 @@ func TestParseFlags(t *testing.T) {
 				reportInterval: 15,
 				pollInterval:   3,
 				rateLimit:      2,
+				cryptoKey:      "envkey",
 			},
 		},
 	}
@@ -109,8 +119,10 @@ func TestParseFlags(t *testing.T) {
 			ReportInterval = 10
 			PollInterval = 2
 			RateLimit = 1
+			CryptoKey = ""
 
-			ParseFlags()
+			configMock := config.AgentConfig{}
+			InitFlags(&configMock)
 
 			assert.Equal(t, tt.expected.mainURL, MainURL)
 			assert.Equal(t, tt.expected.hashKey, HashKey)

@@ -8,12 +8,14 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
+	serverConfig "github.com/ramil063/gometrics/cmd/server/config"
 	"github.com/ramil063/gometrics/cmd/server/handlers"
 	"github.com/ramil063/gometrics/cmd/server/handlers/server"
 	"github.com/ramil063/gometrics/cmd/server/storage/db"
 	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"github.com/ramil063/gometrics/cmd/server/storage/file"
 	"github.com/ramil063/gometrics/internal/logger"
+	"github.com/ramil063/gometrics/internal/security/crypto"
 )
 
 var (
@@ -26,7 +28,20 @@ func main() {
 	if err := logger.Initialize(); err != nil {
 		panic(err)
 	}
-	handlers.ParseFlags()
+
+	config, err := serverConfig.GetConfig()
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "config")
+	}
+	handlers.InitFlags(config)
+
+	if handlers.CryptoKey != "" {
+		var err error
+		crypto.DefaultDecryptor, err = crypto.NewRSADecryptor(handlers.CryptoKey)
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "Failed to create decryptor")
+		}
+	}
 
 	fmt.Printf("Build version: %s\n", buildVersion)
 	fmt.Printf("Build date: %s\n", buildDate)

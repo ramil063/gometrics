@@ -4,6 +4,7 @@ import (
 	"flag"
 
 	"github.com/caarlos0/env/v6"
+	"github.com/ramil063/gometrics/cmd/agent/config"
 )
 
 // MainURL основной урл на который нужно отправлять метрики
@@ -21,22 +22,27 @@ var HashKey = ""
 // RateLimit количество одновременных запросов отправляемых на удаленный сервис
 var RateLimit = 1
 
+// CryptoKey путь до публичного ключа шифрования
+var CryptoKey = ""
+
 // EnvVars содержит переменные флагов
 type EnvVars struct {
 	Address        string `env:"ADDRESS"`
 	HashKey        string `env:"KEY"`
+	CryptoKey      string `env:"CRYPTO_KEY"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	PollInterval   int    `env:"POLL_INTERVAL"`
 	RateLimit      int    `env:"RATE_LIMIT"`
 }
 
-// ParseFlags парсит глобальные переменные системы, или парсит флаги, или подменяет их значениями по умолчанию
-func ParseFlags() {
-	flag.StringVar(&MainURL, "a", "localhost:8080", "address and port to run server")
-	flag.IntVar(&ReportInterval, "r", 10, "report interval in seconds")
-	flag.IntVar(&PollInterval, "p", 2, "poll interval in seconds")
-	flag.StringVar(&HashKey, "k", "", "key for hash")
-	flag.IntVar(&RateLimit, "l", 1, "limit requests")
+// InitFlags парсит глобальные переменные системы, или парсит флаги, или подменяет их значениями по умолчанию
+func InitFlags(config *config.AgentConfig) {
+	flag.StringVar(&MainURL, "a", config.GetAddress(MainURL), "address and port to run server")
+	flag.IntVar(&ReportInterval, "r", config.GetReportInterval(10), "report interval in seconds")
+	flag.IntVar(&PollInterval, "p", config.GetPollInterval(2), "poll interval in seconds")
+	flag.StringVar(&HashKey, "k", config.GetHashKey(""), "key for hash")
+	flag.IntVar(&RateLimit, "l", config.GetRateLimit(1), "limit requests")
+	flag.StringVar(&CryptoKey, "crypto-key", config.GetCryptoKey(""), "key for encryption")
 	flag.Parse()
 
 	var ev EnvVars
@@ -56,5 +62,8 @@ func ParseFlags() {
 	}
 	if ev.RateLimit != 0 {
 		RateLimit = ev.RateLimit
+	}
+	if ev.CryptoKey != "" {
+		CryptoKey = ev.CryptoKey
 	}
 }
