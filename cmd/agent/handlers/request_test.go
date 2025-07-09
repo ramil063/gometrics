@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"sync"
 	"testing"
@@ -162,6 +163,7 @@ func Test_client_SendPostRequestWithBody(t *testing.T) {
 }
 
 func Test_request_SendMultipleMetricsJSON(t *testing.T) {
+	signs := make(chan os.Signal, 1)
 	tests := []struct {
 		name string
 	}{
@@ -170,7 +172,7 @@ func Test_request_SendMultipleMetricsJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := request{}
-			r.SendMultipleMetricsJSON(JSONClientMock{}, 7)
+			r.SendMultipleMetricsJSON(JSONClientMock{}, 7, signs)
 		})
 	}
 }

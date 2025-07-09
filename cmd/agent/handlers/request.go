@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"reflect"
 	"strconv"
 	"sync"
@@ -25,7 +26,7 @@ import (
 // JSONRequester отправляет данные в формате json
 type JSONRequester interface {
 	SendMetricsJSON(c JSONClienter, maxCount int) error
-	SendMultipleMetricsJSON(c JSONClienter, maxCount int)
+	SendMultipleMetricsJSON(c JSONClienter, maxCount int, signs chan os.Signal)
 }
 
 // Requester отправляет данные
@@ -235,7 +236,7 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int) error {
 }
 
 // SendMultipleMetricsJSON отправка нескольких метрик
-func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
+func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int, signs chan os.Signal) {
 	var pollInterval = time.Duration(PollInterval) * time.Second
 	var reportInterval = time.Duration(ReportInterval) * time.Second
 	count := 0
@@ -249,8 +250,9 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 	defer close(sendMonitor)
 
 	var mu sync.Mutex
+	var shutdown = false
 
-	log.Println("agent start")
+	fmt.Println("agent start")
 
 	go func() {
 		defer tickerPool.Stop()
@@ -261,18 +263,17 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 			count++
 			mu.Unlock()
 
-			log.Println("get metrics json start")
+			fmt.Println("get metrics json start")
 			var collectWg sync.WaitGroup
 			CollectMonitorMetrics(count, &monitor, &collectWg)
 			CollectGopsutilMetrics(&monitor, &collectWg)
 			collectWg.Wait()
 
 			sendMonitor <- &monitor
-			log.Println("get metrics json end")
+			fmt.Println("get metrics json end")
 			if len(sendMonitor) == 1 {
 				<-sendMonitor
 			}
-
 		}
 	}()
 
@@ -281,9 +282,9 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 		for maxCount < 0 {
 			<-tickerReport.C
 
-			log.Println("send metrics json start")
+			fmt.Println("send metrics json start")
 			mon := <-sendMonitor
-			log.Println("send metrics json count value=", mon.GetCountValue())
+			fmt.Println("send metrics json count value=", mon.GetCountValue())
 
 			for worker := 0; worker < RateLimit; worker++ {
 				go SendMetrics(c, url, mon, worker)
@@ -292,13 +293,22 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 			mu.Lock()
 			count = 0
 			mu.Unlock()
-			log.Println("send metrics json end")
+			fmt.Println("send metrics json end")
+			select {
+			case <-signs:
+				tickerReport.Stop()
+				tickerPool.Stop()
+				shutdown = true
+				fmt.Println("graceful shutdown signal received")
+			default:
+
+			}
 		}
 	}()
 
 	//Условие завершения функции(для тестирования)
 	times := 0
-	for maxCount < 0 || times < maxCount {
+	for !shutdown && (maxCount < 0 || times < maxCount) {
 		times++
 		time.Sleep(1 * time.Second)
 	}

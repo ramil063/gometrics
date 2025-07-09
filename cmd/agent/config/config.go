@@ -76,12 +76,12 @@ func getConfigName() string {
 func GetConfig() (*AgentConfig, error) {
 	configName := getConfigName()
 
-	if configName == "" {
-		return nil, nil
-	}
-
 	var config AgentConfig
 	var err error
+
+	if configName == "" {
+		return &config, err
+	}
 
 	if err = config.loadConfig(configName); err != nil {
 		return nil, err

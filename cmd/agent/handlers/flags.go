@@ -38,11 +38,11 @@ type EnvVars struct {
 // InitFlags парсит глобальные переменные системы, или парсит флаги, или подменяет их значениями по умолчанию
 func InitFlags(config *config.AgentConfig) {
 	flag.StringVar(&MainURL, "a", config.GetAddress(MainURL), "address and port to run server")
-	flag.IntVar(&ReportInterval, "r", config.GetReportInterval(10), "report interval in seconds")
-	flag.IntVar(&PollInterval, "p", config.GetPollInterval(2), "poll interval in seconds")
-	flag.StringVar(&HashKey, "k", config.GetHashKey(""), "key for hash")
-	flag.IntVar(&RateLimit, "l", config.GetRateLimit(1), "limit requests")
-	flag.StringVar(&CryptoKey, "crypto-key", config.GetCryptoKey(""), "key for encryption")
+	flag.IntVar(&ReportInterval, "r", config.GetReportInterval(ReportInterval), "report interval in seconds")
+	flag.IntVar(&PollInterval, "p", config.GetPollInterval(PollInterval), "poll interval in seconds")
+	flag.StringVar(&HashKey, "k", config.GetHashKey(HashKey), "key for hash")
+	flag.IntVar(&RateLimit, "l", config.GetRateLimit(RateLimit), "limit requests")
+	flag.StringVar(&CryptoKey, "crypto-key", config.GetCryptoKey(CryptoKey), "key for encryption")
 	flag.Parse()
 
 	var ev EnvVars

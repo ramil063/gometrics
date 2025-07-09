@@ -71,12 +71,12 @@ func getConfigName() string {
 func GetConfig() (*ServerConfig, error) {
 	configName := getConfigName()
 
-	if configName == "" {
-		return nil, nil
-	}
-
 	var config ServerConfig
 	var err error
+
+	if configName == "" {
+		return &config, nil
+	}
 
 	if err = config.loadConfig(configName); err != nil {
 		return nil, err

@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgerrcode"
@@ -85,6 +86,7 @@ func (dbr *Repository) Close() error {
 	if err != nil {
 		return internalErrors.NewDBError(err)
 	}
+	fmt.Println("Database closed")
 	return nil
 }
 
