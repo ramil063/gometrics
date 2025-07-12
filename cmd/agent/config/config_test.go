@@ -10,7 +10,7 @@ import (
 
 func TestAgentConfig_loadConfig(t *testing.T) {
 
-	file, _ := os.OpenFile("config_test.json", os.O_WRONLY|os.O_CREATE, 0766)
+	file, _ := os.CreateTemp("", "config_test.json")
 	_, _ = file.Write([]byte(`{
   "address": "testhost:8080",
   "report_interval": "1s",
@@ -19,6 +19,7 @@ func TestAgentConfig_loadConfig(t *testing.T) {
   "rate_limit": "1",
   "crypto_key": "/test/test/test.pem"
 }`))
+	defer os.Remove(file.Name())
 
 	type conf struct {
 		Address        string
@@ -35,7 +36,7 @@ func TestAgentConfig_loadConfig(t *testing.T) {
 	}{
 		{
 			name: "Load Config",
-			path: "config_test.json",
+			path: file.Name(),
 			conf: conf{},
 		},
 	}
@@ -53,7 +54,6 @@ func TestAgentConfig_loadConfig(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	}
-	_ = os.Remove("config_test.json")
 }
 
 func TestAgentConfig_prepareConfig(t *testing.T) {
@@ -104,7 +104,7 @@ func TestAgentConfig_prepareConfig(t *testing.T) {
 }
 
 func TestGetConfig(t *testing.T) {
-	file, _ := os.OpenFile("config_test.json", os.O_WRONLY|os.O_CREATE, 0766)
+	file, _ := os.CreateTemp("", "config_test.json")
 	_, _ = file.Write([]byte(`{
   "address": "testhost:8080",
   "report_interval": "1s",
@@ -113,8 +113,11 @@ func TestGetConfig(t *testing.T) {
   "rate_limit": "1",
   "crypto_key": "/test/test/test.pem"
 }`))
-	_ = os.Setenv("CONFIG", "config_test.json")
+	defer os.Remove(file.Name())
+
+	_ = os.Setenv("CONFIG", file.Name())
 	defer os.Unsetenv("CONFIG")
+
 	tests := []struct {
 		want *AgentConfig
 		name string
@@ -140,5 +143,4 @@ func TestGetConfig(t *testing.T) {
 			}
 		})
 	}
-	_ = os.Remove("config_test.json")
 }

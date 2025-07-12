@@ -94,22 +94,19 @@ func main() {
 
 	// через этот канал сообщим основному потоку, что соединения закрыты
 	idleConnsClosed := make(chan struct{})
-	// канал для перенаправления прерываний
-	// поскольку нужно отловить всего одно прерывание,
-	// ёмкости 1 для канала будет достаточно
-	sigint := make(chan os.Signal, 1)
 	// регистрируем перенаправление прерываний
-	signal.Notify(sigint, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	ctxGrSh, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	defer stop()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 	// запускаем горутину обработки пойманных прерываний
 	go func() {
-		// читаем из канала прерываний
-		// поскольку нужно прочитать только одно прерывание,
-		// можно обойтись без цикла
-		<-sigint
-		// получили сигнал os.Interrupt, запускаем процедуру graceful shutdown
+		<-ctxGrSh.Done()
+		log.Println("Starting graceful shutdown...")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		// получили сигнал запускаем процедуру graceful shutdown
 		if err = srv.Shutdown(ctx); err != nil {
 			// ошибки закрытия Listener
 			log.Printf("HTTP server Shutdown error: %v", err)
@@ -118,12 +115,13 @@ func main() {
 		// сообщаем основному потоку,
 		// что все сетевые соединения обработаны и закрыты
 		close(idleConnsClosed)
+		log.Println("All connections closed")
 	}()
 
 	if err = srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("HTTP server ListenAndServe: %v", err)
+		log.Printf("HTTP server ListenAndServe error: %v", err)
+		stop() // Триггерим shutdown при ошибке сервера
 	}
-
 	// ждём завершения процедуры graceful shutdown
 	<-idleConnsClosed
 	// получили оповещение о завершении
@@ -131,8 +129,11 @@ func main() {
 	// например закрыть соединение с базой данных,
 	// закрыть открытые файлы
 	// если для хранения использовались
-	// 1) база данных - то она закроется,
-	//    так как сразу после открытия базы есть defer dml.DBRepository.Close()
+	// 1) база данных
+	// Явное освобождение ресурса
+	if err = dml.DBRepository.Close(); err != nil {
+		log.Printf("Error closing DB: %v", err)
+	}
 	// 2) файловая система - то файл закроется,
 	//    так как везде при открытии файла рядом есть defer Reader.Close() или defer Writer.Close()
 	// 3) оперативная память - то все мьютексы освободятся,

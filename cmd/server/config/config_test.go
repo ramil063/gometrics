@@ -9,7 +9,7 @@ import (
 )
 
 func TestAgentConfig_loadConfig(t *testing.T) {
-	file, _ := os.OpenFile("config_test.json", os.O_WRONLY|os.O_CREATE, 0766)
+	file, _ := os.CreateTemp("", "config_test.json")
 	_, _ = file.Write([]byte(`{
   "address": "localhost:8080",
   "restore": true,
@@ -18,6 +18,7 @@ func TestAgentConfig_loadConfig(t *testing.T) {
   "database_dsn": "",
   "crypto_key": "/path/to/key.pem"
 }`))
+	defer os.Remove(file.Name())
 
 	type conf struct {
 		Address         string
@@ -35,7 +36,7 @@ func TestAgentConfig_loadConfig(t *testing.T) {
 	}{
 		{
 			name: "Load Config",
-			path: "config_test.json",
+			path: file.Name(),
 			conf: conf{},
 		},
 	}
@@ -110,7 +111,7 @@ func TestAgentConfig_prepareConfig(t *testing.T) {
 }
 
 func TestGetConfig(t *testing.T) {
-	file, _ := os.OpenFile("config_test.json", os.O_WRONLY|os.O_CREATE, 0766)
+	file, _ := os.CreateTemp("", "config_test.json")
 	_, _ = file.Write([]byte(`{
 "address": "localhost:8080",
 "restore": true,
@@ -120,9 +121,13 @@ func TestGetConfig(t *testing.T) {
 "crypto_key": "/path/to/key.pem",
 "hash_key": "test"
 }`))
-	restoreTrue := true
-	_ = os.Setenv("CONFIG", "config_test.json")
+	defer os.Remove(file.Name())
+
+	_ = os.Setenv("CONFIG", file.Name())
 	defer os.Unsetenv("CONFIG")
+
+	restoreTrue := true
+
 	tests := []struct {
 		want *ServerConfig
 		name string
@@ -149,5 +154,4 @@ func TestGetConfig(t *testing.T) {
 			}
 		})
 	}
-	_ = os.Remove("config_test.json")
 }

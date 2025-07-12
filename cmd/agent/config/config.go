@@ -3,11 +3,13 @@ package config
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/caarlos0/env/v6"
+	"github.com/ramil063/gometrics/internal/logger"
 )
 
 type envConfig struct {
@@ -28,11 +30,11 @@ type AgentConfig struct {
 func (cfg *AgentConfig) loadConfig(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read the config file %s: %w", path, err)
 	}
 
 	if err = json.Unmarshal(data, &cfg); err != nil {
-		return err
+		return fmt.Errorf("failed to unmurshal the config file %s: %w", path, err)
 	}
 
 	return nil
@@ -42,13 +44,13 @@ func (cfg *AgentConfig) loadConfig(path string) error {
 func (cfg *AgentConfig) prepareConfig() error {
 	reportInterval, err := time.ParseDuration(cfg.ReportInterval)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse ReportInterval: %w", err)
 	}
 	cfg.ReportInterval = strconv.FormatFloat(reportInterval.Seconds(), 'f', 0, 64)
 
 	pollInterval, err := time.ParseDuration(cfg.PollInterval)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse PollInterval: %w", err)
 	}
 	cfg.PollInterval = strconv.FormatFloat(pollInterval.Seconds(), 'f', 0, 64)
 
@@ -63,7 +65,10 @@ func getConfigName() string {
 	flag.StringVar(&configName, "config", "", "key for configuration")
 
 	var ev envConfig
-	_ = env.Parse(&ev)
+	err := env.Parse(&ev)
+	if err != nil {
+		logger.WriteErrorLog("failed to parse config vars", "envConfig")
+	}
 
 	if ev.Config != "" {
 		configName = ev.Config
@@ -80,7 +85,7 @@ func GetConfig() (*AgentConfig, error) {
 	var err error
 
 	if configName == "" {
-		return &config, err
+		return &config, nil
 	}
 
 	if err = config.loadConfig(configName); err != nil {

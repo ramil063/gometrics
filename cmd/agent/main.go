@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -37,11 +38,11 @@ func main() {
 	fmt.Printf("Build date: %s\n", buildDate)
 	fmt.Printf("Build commit: %s\n", buildCommit)
 
-	signs := make(chan os.Signal, 1)
-	signal.Notify(signs, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	ctxGrSh, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	defer stop()
 
 	c := handlers.NewJSONClient()
 	r := handlers.NewRequest()
-	r.SendMultipleMetricsJSON(c, -1, signs)
+	r.SendMultipleMetricsJSON(c, -1, ctxGrSh)
 	fmt.Println("Server shutdown gracefully")
 }
