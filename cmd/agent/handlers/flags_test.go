@@ -15,7 +15,7 @@ func TestGetFlags(t *testing.T) {
 		envVars  map[string]string
 		args     []string
 		expected struct {
-			mainURL        string
+			address        string
 			hashKey        string
 			cryptoKey      string
 			reportInterval int
@@ -28,14 +28,14 @@ func TestGetFlags(t *testing.T) {
 			envVars: map[string]string{},
 			args:    []string{},
 			expected: struct {
-				mainURL        string
+				address        string
 				hashKey        string
 				cryptoKey      string
 				reportInterval int
 				pollInterval   int
 				rateLimit      int
 			}{
-				mainURL:        "localhost:8080",
+				address:        "localhost:8080",
 				hashKey:        "",
 				reportInterval: 10,
 				pollInterval:   2,
@@ -55,14 +55,14 @@ func TestGetFlags(t *testing.T) {
 				"-crypto-key", "secret",
 			},
 			expected: struct {
-				mainURL        string
+				address        string
 				hashKey        string
 				cryptoKey      string
 				reportInterval int
 				pollInterval   int
 				rateLimit      int
 			}{
-				mainURL:        "localhost:9090",
+				address:        "localhost:9090",
 				hashKey:        "secret",
 				reportInterval: 20,
 				pollInterval:   5,
@@ -82,14 +82,14 @@ func TestGetFlags(t *testing.T) {
 			},
 			args: []string{},
 			expected: struct {
-				mainURL        string
+				address        string
 				hashKey        string
 				cryptoKey      string
 				reportInterval int
 				pollInterval   int
 				rateLimit      int
 			}{
-				mainURL:        "localhost:7070",
+				address:        "localhost:7070",
 				hashKey:        "envkey",
 				reportInterval: 15,
 				pollInterval:   3,
@@ -117,7 +117,7 @@ func TestGetFlags(t *testing.T) {
 			flags, err := GetFlags(&configMock)
 
 			assert.NoError(t, err)
-			assert.Equal(t, tt.expected.mainURL, flags.Address)
+			assert.Equal(t, tt.expected.address, flags.Address)
 			assert.Equal(t, tt.expected.hashKey, flags.HashKey)
 			assert.Equal(t, tt.expected.reportInterval, flags.ReportInterval)
 			assert.Equal(t, tt.expected.pollInterval, flags.PollInterval)
