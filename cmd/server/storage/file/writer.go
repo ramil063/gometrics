@@ -3,6 +3,7 @@ package file
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/ramil063/gometrics/internal/errors"
@@ -79,5 +80,6 @@ func (w *Writer) Close() error {
 	if err != nil {
 		return errors.NewFileError(err)
 	}
+	fmt.Println("File closed")
 	return nil
 }

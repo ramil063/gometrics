@@ -3,6 +3,7 @@ package file
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -78,5 +79,6 @@ func (r *Reader) Close() error {
 	if err != nil {
 		return errors.NewFileError(err)
 	}
+	fmt.Println("File closed")
 	return nil
 }

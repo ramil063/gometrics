@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,18 +20,19 @@ import (
 	"github.com/ramil063/gometrics/internal/hash"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
+	"github.com/ramil063/gometrics/internal/security/crypto"
 )
 
 // JSONRequester отправляет данные в формате json
 type JSONRequester interface {
-	SendMetricsJSON(c JSONClienter, maxCount int) error
-	SendMultipleMetricsJSON(c JSONClienter, maxCount int)
+	SendMetricsJSON(c JSONClienter, maxCount int, flags *SystemConfigFlags) error
+	SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh context.Context, flags *SystemConfigFlags)
 }
 
 // Requester отправляет данные
 type Requester interface {
 	JSONRequester
-	SendMetrics(c Clienter, maxCount int) error
+	SendMetrics(c Clienter, maxCount int, flags *SystemConfigFlags) error
 }
 
 // Clienter работа с клиентов
@@ -42,7 +44,7 @@ type Clienter interface {
 // JSONClienter работа с клиентом в формате json
 type JSONClienter interface {
 	Clienter
-	SendPostRequestWithBody(url string, body []byte) error
+	SendPostRequestWithBody(url string, body []byte, flags *SystemConfigFlags) error
 }
 
 type client struct {
@@ -81,18 +83,29 @@ func (c client) SendPostRequest(url string) error {
 }
 
 // SendPostRequestWithBody отправляет пост запроса с телом
-func (c client) SendPostRequestWithBody(url string, body []byte) error {
-	data, err := compressData(body)
+func (c client) SendPostRequestWithBody(url string, body []byte, flags *SystemConfigFlags) error {
+	var err error
+	data := body
+
+	if crypto.DefaultEncryptor != nil {
+		data, err = crypto.DefaultEncryptor.Encrypt(data)
+		if err != nil {
+			return err
+		}
+	}
+
+	data, err = compressData(data)
 	if err != nil {
 		return err
 	}
+
 	req, _ := http.NewRequest("POST", url, bytes.NewReader(data))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("Accept-Encoding", "gzip")
 
-	if HashKey != "" {
-		hashSha256 := hash.CreateSha256(body, HashKey)
+	if flags.HashKey != "" {
+		hashSha256 := hash.CreateSha256(body, flags.HashKey)
 		req.Header.Set("HashSHA256", hashSha256)
 	}
 
@@ -101,6 +114,7 @@ func (c client) SendPostRequestWithBody(url string, body []byte) error {
 		return err
 	}
 	defer res.Body.Close()
+
 	var b []byte
 	res.Body.Read(b)
 	if res.StatusCode != http.StatusOK {
@@ -116,7 +130,7 @@ func (c client) NewRequest(method string, url string) (*http.Request, error) {
 }
 
 // SendMetrics отправка метрик
-func (r request) SendMetrics(c Clienter, maxCount int) error {
+func (r request) SendMetrics(c Clienter, maxCount int, flags *SystemConfigFlags) error {
 	var interval = 1 * time.Second
 	count := 0
 	seconds := 0
@@ -125,14 +139,14 @@ func (r request) SendMetrics(c Clienter, maxCount int) error {
 	for count < maxCount {
 		<-time.After(interval)
 		seconds++
-		if (seconds % PollInterval) == 0 {
+		if (seconds % flags.PollInterval) == 0 {
 			log.Println("get metrics")
 			m = storage.NewMonitor()
 			m.PollCount = models.Counter(count)
 			count++
 		}
 
-		if (seconds % ReportInterval) == 0 {
+		if (seconds % flags.ReportInterval) == 0 {
 			v := reflect.ValueOf(m).Elem()
 			typeOfS := v.Type()
 			log.Println("send metrics")
@@ -147,7 +161,7 @@ func (r request) SendMetrics(c Clienter, maxCount int) error {
 					metricType = "counter"
 				}
 				metricValue := fmt.Sprintf("%v", v.Field(i).Interface())
-				url := "http://" + MainURL + "/update/" + metricType + "/" + name + "/" + metricValue
+				url := "http://" + flags.Address + "/update/" + metricType + "/" + name + "/" + metricValue
 
 				err := c.SendPostRequest(url)
 				if err != nil {
@@ -162,7 +176,7 @@ func (r request) SendMetrics(c Clienter, maxCount int) error {
 }
 
 // SendMetricsJSON отправка метрик
-func (r request) SendMetricsJSON(c JSONClienter, maxCount int) error {
+func (r request) SendMetricsJSON(c JSONClienter, maxCount int, flags *SystemConfigFlags) error {
 	var interval = 1 * time.Second
 	count := 0
 	seconds := 0
@@ -171,14 +185,14 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int) error {
 	for seconds < maxCount {
 		<-time.After(interval)
 		seconds++
-		if (seconds % PollInterval) == 0 {
+		if (seconds % flags.PollInterval) == 0 {
 			log.Println("get metrics json")
 			m = storage.NewMonitor()
 			m.PollCount = models.Counter(count)
 			count++
 		}
 
-		if (seconds % ReportInterval) == 0 {
+		if (seconds % flags.ReportInterval) == 0 {
 			v := reflect.ValueOf(m).Elem()
 			typeOfS := v.Type()
 			log.Println("send metrics json")
@@ -205,13 +219,13 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int) error {
 					metrics.Value = nil
 				}
 
-				url := "http://" + MainURL + "/update"
+				url := "http://" + flags.Address + "/update"
 				body, err := json.Marshal(metrics)
 				if err != nil {
 					logger.WriteErrorLog("Error marshal metrics", err.Error())
 				}
 
-				err = c.SendPostRequestWithBody(url, body)
+				err = c.SendPostRequestWithBody(url, body, flags)
 				if err != nil {
 					logger.WriteErrorLog("Error in request", err.Error())
 				}
@@ -222,11 +236,11 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int) error {
 }
 
 // SendMultipleMetricsJSON отправка нескольких метрик
-func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
-	var pollInterval = time.Duration(PollInterval) * time.Second
-	var reportInterval = time.Duration(ReportInterval) * time.Second
+func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh context.Context, flags *SystemConfigFlags) {
+	var pollInterval = time.Duration(flags.PollInterval) * time.Second
+	var reportInterval = time.Duration(flags.ReportInterval) * time.Second
 	count := 0
-	url := "http://" + MainURL + "/updates"
+	url := "http://" + flags.Address + "/updates"
 
 	var monitor storage.Monitor
 	tickerPool := time.NewTicker(pollInterval)
@@ -236,6 +250,7 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 	defer close(sendMonitor)
 
 	var mu sync.Mutex
+	var shutdown = false
 
 	log.Println("agent start")
 
@@ -259,7 +274,6 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 			if len(sendMonitor) == 1 {
 				<-sendMonitor
 			}
-
 		}
 	}()
 
@@ -272,30 +286,36 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int) {
 			mon := <-sendMonitor
 			log.Println("send metrics json count value=", mon.GetCountValue())
 
-			for worker := 0; worker < RateLimit; worker++ {
-				go SendMetrics(c, url, mon, worker)
+			for worker := 0; worker < flags.RateLimit; worker++ {
+				go SendMetrics(c, url, mon, flags)
 			}
 
 			mu.Lock()
 			count = 0
 			mu.Unlock()
 			log.Println("send metrics json end")
+
+			<-ctxGrSh.Done() // Ожидаем сигнал завершения:
+			tickerReport.Stop()
+			tickerPool.Stop()
+			shutdown = true
+			log.Println("graceful shutdown signal received")
 		}
 	}()
 
-	//Условие завершения функции(для тестирования)
+	//Условие завершения функции
 	times := 0
-	for maxCount < 0 || times < maxCount {
+	for !shutdown && (maxCount < 0 || times < maxCount) {
 		times++
 		time.Sleep(1 * time.Second)
 	}
 }
 
-func retryToSendMetrics(c JSONClienter, url string, body []byte, tries []int) error {
+func retryToSendMetrics(c JSONClienter, url string, body []byte, tries []int, flags *SystemConfigFlags) error {
 	var err error
 	for try := 0; try < len(tries); try++ {
 		time.Sleep(time.Duration(tries[try]) * time.Second)
-		err = c.SendPostRequestWithBody(url, body)
+		err = c.SendPostRequestWithBody(url, body, flags)
 		if err == nil {
 			break
 		}
@@ -378,15 +398,15 @@ func CollectGopsutilMetrics(monitor *storage.Monitor, wg *sync.WaitGroup) {
 }
 
 // SendMetrics отправляет метрики(несколько раз в случае неудачной отправки)
-func SendMetrics(c JSONClienter, url string, monitor *storage.Monitor, worker int) {
+func SendMetrics(c JSONClienter, url string, monitor *storage.Monitor, flags *SystemConfigFlags) {
 	var err error
 	body := CollectMetricsRequestBodies(monitor)
 
-	if err = c.SendPostRequestWithBody(url, body); err != nil {
+	if err = c.SendPostRequestWithBody(url, body, flags); err != nil {
 		logger.WriteErrorLog(err.Error(), "Error in request")
 		var reqErr *internalErrors.RequestError
 		if errors.Is(err, reqErr) || errors.Is(err, syscall.ECONNREFUSED) {
-			err = retryToSendMetrics(c, url, body, internalErrors.TriesTimes)
+			err = retryToSendMetrics(c, url, body, internalErrors.TriesTimes, flags)
 			if err != nil {
 				logger.WriteErrorLog(err.Error(), "Error in retry request")
 			}
