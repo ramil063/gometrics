@@ -24,10 +24,14 @@ func main() {
 	if err != nil {
 		logger.WriteErrorLog(err.Error(), "config")
 	}
-	handlers.InitFlags(config)
 
-	if handlers.CryptoKey != "" {
-		crypto.DefaultEncryptor, err = crypto.NewRSAEncryptor(handlers.CryptoKey)
+	flags, err := handlers.GetFlags(config)
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "flags")
+	}
+
+	if flags != nil && flags.CryptoKey != "" {
+		crypto.DefaultEncryptor, err = crypto.NewRSAEncryptor(flags.CryptoKey)
 
 		if err != nil {
 			logger.WriteErrorLog(err.Error(), "Failed to create encryptor")
@@ -43,6 +47,6 @@ func main() {
 
 	c := handlers.NewJSONClient()
 	r := handlers.NewRequest()
-	r.SendMultipleMetricsJSON(c, -1, ctxGrSh)
+	r.SendMultipleMetricsJSON(c, -1, ctxGrSh, flags)
 	fmt.Println("Server shutdown gracefully")
 }

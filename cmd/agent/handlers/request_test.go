@@ -36,7 +36,7 @@ func (c ClientMock) NewRequest(method string, url string) (*http.Request, error)
 	return httptest.NewRequest(method, url, nil), nil
 }
 
-func (c JSONClientMock) SendPostRequestWithBody(url string, body []byte) error {
+func (c JSONClientMock) SendPostRequestWithBody(url string, body []byte, flags *SystemConfigFlags) error {
 	_ = httptest.NewRequest("POST", url, bytes.NewReader(body))
 	return nil
 }
@@ -64,10 +64,18 @@ func Test_request_SendMetrics(t *testing.T) {
 	}{
 		{"send request"},
 	}
+
+	flags := &SystemConfigFlags{
+		Address:        ":8080",
+		PollInterval:   2,
+		ReportInterval: 10,
+		RateLimit:      1,
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := request{}
-			assert.NoError(t, r.SendMetrics(ClientMock{}, 5))
+			assert.NoError(t, r.SendMetrics(ClientMock{}, 5, flags))
 		})
 	}
 }
@@ -78,10 +86,17 @@ func Test_request_SendMetricsJSON(t *testing.T) {
 	}{
 		{"send request"},
 	}
+	flags := &SystemConfigFlags{
+		Address:        ":8080",
+		PollInterval:   2,
+		ReportInterval: 10,
+		RateLimit:      1,
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := request{}
-			assert.NoError(t, r.SendMetricsJSON(JSONClientMock{}, 11))
+			assert.NoError(t, r.SendMetricsJSON(JSONClientMock{}, 11, flags))
 		})
 	}
 }
@@ -125,7 +140,7 @@ func Test_client_SendPostRequest(t *testing.T) {
 	}{
 		{
 			name:    "send post",
-			args:    args{url: "http://" + MainURL + "/update/gauge/metric1/100"},
+			args:    args{url: "http://localhost:8080/update/gauge/metric1/100"},
 			wantErr: assert.NoError,
 		},
 	}
@@ -151,13 +166,18 @@ func Test_client_SendPostRequestWithBody(t *testing.T) {
 		{
 			wantErr: assert.NoError,
 			name:    "send post",
-			args:    args{url: "http://" + MainURL + "/update", body: body},
+			args:    args{url: "http://localhost:8080/update", body: body},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := JSONClientMock{}
-			tt.wantErr(t, c.SendPostRequestWithBody(tt.args.url, tt.args.body), fmt.Sprintf("SendPostRequestWithBody(%v, %v)", tt.args.url, tt.args.body))
+			flags := SystemConfigFlags{}
+			tt.wantErr(
+				t,
+				c.SendPostRequestWithBody(tt.args.url, tt.args.body, &flags),
+				fmt.Sprintf("SendPostRequestWithBody(%v, %v)", tt.args.url, tt.args.body),
+			)
 		})
 	}
 }
@@ -168,10 +188,16 @@ func Test_request_SendMultipleMetricsJSON(t *testing.T) {
 	}{
 		{"send request"},
 	}
+	flags := &SystemConfigFlags{
+		Address:        ":8080",
+		PollInterval:   2,
+		ReportInterval: 10,
+		RateLimit:      1,
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := request{}
-			r.SendMultipleMetricsJSON(JSONClientMock{}, 7, context.Background())
+			r.SendMultipleMetricsJSON(JSONClientMock{}, 7, context.Background(), flags)
 		})
 	}
 }

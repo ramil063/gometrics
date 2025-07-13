@@ -2,31 +2,20 @@ package handlers
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/ramil063/gometrics/cmd/agent/config"
 )
 
-// MainURL основной урл на который нужно отправлять метрики
-var MainURL = "localhost:8080"
-
+// SystemConfigFlags содержит переменные флагов
+// Address основной урл на который нужно отправлять метрики
 // PollInterval с каким интервалом в секундах нужно собирать метрики
-var PollInterval = 2
-
 // ReportInterval с каким интервалом в секундах нужно отправлять данные на удаленный сервис
-var ReportInterval = 10
-
 // HashKey ключ для шифрования и дешифровки передаваемых данных
-var HashKey = ""
-
 // RateLimit количество одновременных запросов отправляемых на удаленный сервис
-var RateLimit = 1
-
 // CryptoKey путь до публичного ключа шифрования
-var CryptoKey = ""
-
-// EnvVars содержит переменные флагов
-type EnvVars struct {
+type SystemConfigFlags struct {
 	Address        string `env:"ADDRESS"`
 	HashKey        string `env:"KEY"`
 	CryptoKey      string `env:"CRYPTO_KEY"`
@@ -35,35 +24,86 @@ type EnvVars struct {
 	RateLimit      int    `env:"RATE_LIMIT"`
 }
 
-// InitFlags парсит глобальные переменные системы, или парсит флаги, или подменяет их значениями по умолчанию
-func InitFlags(config *config.AgentConfig) {
-	flag.StringVar(&MainURL, "a", config.GetAddress(MainURL), "address and port to run server")
-	flag.IntVar(&ReportInterval, "r", config.GetReportInterval(ReportInterval), "report interval in seconds")
-	flag.IntVar(&PollInterval, "p", config.GetPollInterval(PollInterval), "poll interval in seconds")
-	flag.StringVar(&HashKey, "k", config.GetHashKey(HashKey), "key for hash")
-	flag.IntVar(&RateLimit, "l", config.GetRateLimit(RateLimit), "limit requests")
-	flag.StringVar(&CryptoKey, "crypto-key", config.GetCryptoKey(CryptoKey), "key for encryption")
+// GetFlags парсит глобальные переменные системы, или парсит флаги, или подменяет их значениями по умолчанию
+func GetFlags(config *config.AgentConfig) (*SystemConfigFlags, error) {
+
+	//значения флагов по умолчанию
+	flags := &SystemConfigFlags{
+		Address:        "localhost:8080",
+		PollInterval:   2,
+		ReportInterval: 10,
+		RateLimit:      1,
+	}
+
+	var (
+		address        string
+		hashKey        string
+		cryptoKey      string
+		reportInterval int
+		pollInterval   int
+		rateLimit      int
+	)
+
+	flag.StringVar(&address, "a", config.GetAddress(flags.Address), "address and port to run server")
+	flag.IntVar(&reportInterval, "r", config.GetReportInterval(flags.ReportInterval), "report interval in seconds")
+	flag.IntVar(&pollInterval, "p", config.GetPollInterval(flags.PollInterval), "poll interval in seconds")
+	flag.StringVar(&hashKey, "k", config.GetHashKey(flags.HashKey), "key for hash")
+	flag.IntVar(&rateLimit, "l", config.GetRateLimit(flags.RateLimit), "limit requests")
+	flag.StringVar(&cryptoKey, "crypto-key", config.GetCryptoKey(flags.CryptoKey), "key for encryption")
 	flag.Parse()
 
-	var ev EnvVars
-	_ = env.Parse(&ev)
+	var envVars SystemConfigFlags
+	err := env.Parse(&envVars)
+	if err != nil {
+		return flags, fmt.Errorf("error parsing environment variables: %w", err)
+	}
 
-	if ev.Address != "" {
-		MainURL = ev.Address
+	applyFlags(flags, address, reportInterval, pollInterval, hashKey, rateLimit, cryptoKey)
+	applyEnvVars(flags, envVars)
+
+	return flags, nil
+}
+
+// applyFlags присваивание флагов переданных в командной строке
+func applyFlags(flags *SystemConfigFlags, address string, reportInterval, pollInterval int, hashKey string, rateLimit int, cryptoKey string) {
+	if address != "" && address != flags.Address {
+		flags.Address = address
 	}
-	if ev.ReportInterval != 0 {
-		ReportInterval = ev.ReportInterval
+	if reportInterval != 0 && reportInterval != flags.ReportInterval {
+		flags.ReportInterval = reportInterval
 	}
-	if ev.PollInterval != 0 {
-		PollInterval = ev.PollInterval
+	if pollInterval != 0 && pollInterval != flags.PollInterval {
+		flags.PollInterval = pollInterval
 	}
-	if ev.HashKey != "" {
-		HashKey = ev.HashKey
+	if hashKey != "" && hashKey != flags.HashKey {
+		flags.HashKey = hashKey
 	}
-	if ev.RateLimit != 0 {
-		RateLimit = ev.RateLimit
+	if rateLimit != 0 && rateLimit != flags.RateLimit {
+		flags.RateLimit = rateLimit
 	}
-	if ev.CryptoKey != "" {
-		CryptoKey = ev.CryptoKey
+	if cryptoKey != "" && cryptoKey != flags.CryptoKey {
+		flags.CryptoKey = cryptoKey
+	}
+}
+
+// applyEnvVars присваивание переменных окружения
+func applyEnvVars(flags *SystemConfigFlags, envVars SystemConfigFlags) {
+	if envVars.Address != "" {
+		flags.Address = envVars.Address
+	}
+	if envVars.ReportInterval != 0 {
+		flags.ReportInterval = envVars.ReportInterval
+	}
+	if envVars.PollInterval != 0 {
+		flags.PollInterval = envVars.PollInterval
+	}
+	if envVars.HashKey != "" {
+		flags.HashKey = envVars.HashKey
+	}
+	if envVars.RateLimit != 0 {
+		flags.RateLimit = envVars.RateLimit
+	}
+	if envVars.CryptoKey != "" {
+		flags.CryptoKey = envVars.CryptoKey
 	}
 }

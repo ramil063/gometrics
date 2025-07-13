@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInitFlags(t *testing.T) {
+func TestGetFlags(t *testing.T) {
 	tests := []struct {
 		name     string
 		envVars  map[string]string
@@ -113,22 +113,105 @@ func TestInitFlags(t *testing.T) {
 			// Set command line args
 			os.Args = append([]string{"cmd"}, tt.args...)
 
-			// Reset global variables
-			MainURL = "localhost:8080"
-			HashKey = ""
-			ReportInterval = 10
-			PollInterval = 2
-			RateLimit = 1
-			CryptoKey = ""
-
 			configMock := config.AgentConfig{}
-			InitFlags(&configMock)
+			flags, err := GetFlags(&configMock)
 
-			assert.Equal(t, tt.expected.mainURL, MainURL)
-			assert.Equal(t, tt.expected.hashKey, HashKey)
-			assert.Equal(t, tt.expected.reportInterval, ReportInterval)
-			assert.Equal(t, tt.expected.pollInterval, PollInterval)
-			assert.Equal(t, tt.expected.rateLimit, RateLimit)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected.mainURL, flags.Address)
+			assert.Equal(t, tt.expected.hashKey, flags.HashKey)
+			assert.Equal(t, tt.expected.reportInterval, flags.ReportInterval)
+			assert.Equal(t, tt.expected.pollInterval, flags.PollInterval)
+			assert.Equal(t, tt.expected.rateLimit, flags.RateLimit)
+		})
+	}
+}
+
+func Test_applyFlags(t *testing.T) {
+	type args struct {
+		flags          *SystemConfigFlags
+		address        string
+		hashKey        string
+		cryptoKey      string
+		reportInterval int
+		pollInterval   int
+		rateLimit      int
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "test 1",
+			args: args{
+				flags: &SystemConfigFlags{
+					Address:        "defaultLocalhost:8080",
+					HashKey:        "defaultHashKey",
+					CryptoKey:      "defaultCryptoKey",
+					ReportInterval: 1,
+					PollInterval:   2,
+					RateLimit:      3,
+				},
+				address:        "notDefaultLocalhost:8080",
+				hashKey:        "notDefault",
+				cryptoKey:      "notDefault",
+				reportInterval: 10,
+				pollInterval:   20,
+				rateLimit:      30,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			applyFlags(tt.args.flags, tt.args.address, tt.args.reportInterval, tt.args.pollInterval, tt.args.hashKey, tt.args.rateLimit, tt.args.cryptoKey)
+			assert.Equal(t, tt.args.flags.Address, tt.args.address)
+			assert.Equal(t, tt.args.hashKey, tt.args.hashKey)
+			assert.Equal(t, tt.args.reportInterval, tt.args.reportInterval)
+			assert.Equal(t, tt.args.pollInterval, tt.args.pollInterval)
+			assert.Equal(t, tt.args.rateLimit, tt.args.rateLimit)
+		})
+	}
+}
+
+func Test_applyEnvVars(t *testing.T) {
+	type args struct {
+		flags   *SystemConfigFlags
+		envVars SystemConfigFlags
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "test 1",
+			args: args{
+				flags: &SystemConfigFlags{
+					Address:        "defaultLocalhost:8080",
+					HashKey:        "defaultHashKey",
+					CryptoKey:      "defaultCryptoKey",
+					ReportInterval: 1,
+					PollInterval:   2,
+					RateLimit:      3,
+				},
+				envVars: SystemConfigFlags{
+					Address:        "notDefaultLocalhost:8080",
+					HashKey:        "notDefault",
+					CryptoKey:      "notDefault",
+					ReportInterval: 10,
+					PollInterval:   20,
+					RateLimit:      30,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			applyEnvVars(tt.args.flags, tt.args.envVars)
+			assert.Equal(t, tt.args.flags.Address, tt.args.envVars.Address)
+			assert.Equal(t, tt.args.flags.HashKey, tt.args.envVars.HashKey)
+			assert.Equal(t, tt.args.flags.CryptoKey, tt.args.envVars.CryptoKey)
+			assert.Equal(t, tt.args.envVars.ReportInterval, tt.args.envVars.ReportInterval)
+			assert.Equal(t, tt.args.envVars.PollInterval, tt.args.envVars.PollInterval)
+			assert.Equal(t, tt.args.envVars.RateLimit, tt.args.envVars.RateLimit)
 		})
 	}
 }
