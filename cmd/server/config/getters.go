@@ -59,3 +59,11 @@ func (cfg *ServerConfig) GetRestore(defaultValue bool) bool {
 	}
 	return defaultValue
 }
+
+// GetTrustedSubnet получение параметра TrustedSubnet
+func (cfg *ServerConfig) GetTrustedSubnet(defaultValue string) string {
+	if cfg.TrustedSubnet != "" {
+		return cfg.TrustedSubnet
+	}
+	return defaultValue
+}

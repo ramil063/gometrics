@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ramil063/gometrics/cmd/agent/storage"
+	internalErrors "github.com/ramil063/gometrics/internal/errors"
 )
 
 type RequestMock struct {
@@ -36,18 +38,22 @@ func (c ClientMock) NewRequest(method string, url string) (*http.Request, error)
 	return httptest.NewRequest(method, url, nil), nil
 }
 
-func (c JSONClientMock) SendPostRequestWithBody(url string, body []byte, flags *SystemConfigFlags) error {
+func (c JSONClientMock) SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags) error {
 	_ = httptest.NewRequest("POST", url, bytes.NewReader(body))
 	return nil
 }
 
 func TestNewRequest(t *testing.T) {
+	req := RequestMock{}
+	req.Request = request{
+		IP: "127.0.1.1",
+	}
 	tests := []struct {
 		want Requester
 		name string
 	}{
 		{
-			want: RequestMock{}.Request,
+			want: req.Request,
 			name: "create new request",
 		},
 	}
@@ -175,7 +181,7 @@ func Test_client_SendPostRequestWithBody(t *testing.T) {
 			flags := SystemConfigFlags{}
 			tt.wantErr(
 				t,
-				c.SendPostRequestWithBody(tt.args.url, tt.args.body, &flags),
+				c.SendPostRequestWithBody(request{}, tt.args.url, tt.args.body, &flags),
 				fmt.Sprintf("SendPostRequestWithBody(%v, %v)", tt.args.url, tt.args.body),
 			)
 		})
@@ -249,5 +255,134 @@ func BenchmarkCollectGopsutilMetrics(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		CollectGopsutilMetrics(&m, &wg)
+	}
+}
+
+func TestCollectMetricsRequestBodies(t *testing.T) {
+	tests := []struct {
+		name    string
+		monitor *storage.Monitor
+		want    []byte
+	}{
+		{
+			name:    "test 1",
+			monitor: &storage.Monitor{},
+			want:    []byte("[{\"id\":\"Alloc\",\"type\":\"gauge\",\"value\":0},{\"id\":\"BuckHashSys\",\"type\":\"gauge\",\"value\":0},{\"id\":\"Frees\",\"type\":\"gauge\",\"value\":0},{\"id\":\"GCSys\",\"type\":\"gauge\",\"value\":0},{\"id\":\"HeapAlloc\",\"type\":\"gauge\",\"value\":0},{\"id\":\"HeapIdle\",\"type\":\"gauge\",\"value\":0},{\"id\":\"HeapInuse\",\"type\":\"gauge\",\"value\":0},{\"id\":\"HeapObjects\",\"type\":\"gauge\",\"value\":0},{\"id\":\"HeapReleased\",\"type\":\"gauge\",\"value\":0},{\"id\":\"HeapSys\",\"type\":\"gauge\",\"value\":0},{\"id\":\"LastGC\",\"type\":\"gauge\",\"value\":0},{\"id\":\"Lookups\",\"type\":\"gauge\",\"value\":0},{\"id\":\"MCacheInuse\",\"type\":\"gauge\",\"value\":0},{\"id\":\"MCacheSys\",\"type\":\"gauge\",\"value\":0},{\"id\":\"Mallocs\",\"type\":\"gauge\",\"value\":0},{\"id\":\"NextGC\",\"type\":\"gauge\",\"value\":0},{\"id\":\"OtherSys\",\"type\":\"gauge\",\"value\":0},{\"id\":\"PauseTotalNs\",\"type\":\"gauge\",\"value\":0},{\"id\":\"StackInuse\",\"type\":\"gauge\",\"value\":0},{\"id\":\"Sys\",\"type\":\"gauge\",\"value\":0},{\"id\":\"StackSys\",\"type\":\"gauge\",\"value\":0},{\"id\":\"MSpanInuse\",\"type\":\"gauge\",\"value\":0},{\"id\":\"MSpanSys\",\"type\":\"gauge\",\"value\":0},{\"id\":\"TotalMemory\",\"type\":\"gauge\",\"value\":0},{\"id\":\"FreeMemory\",\"type\":\"gauge\",\"value\":0},{\"id\":\"TotalAlloc\",\"type\":\"gauge\",\"value\":0},{\"id\":\"GCCPUFraction\",\"type\":\"gauge\",\"value\":0},{\"id\":\"NumForcedGC\",\"type\":\"gauge\",\"value\":0},{\"id\":\"NumGC\",\"type\":\"gauge\",\"value\":0},{\"id\":\"PollCount\",\"type\":\"counter\",\"delta\":0},{\"id\":\"RandomValue\",\"type\":\"gauge\",\"value\":0}]"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bodies := CollectMetricsRequestBodies(tt.monitor)
+			assert.Equal(t, tt.want, bodies)
+		})
+	}
+}
+
+func TestSendPostRequest_Success(t *testing.T) {
+	// Создаем мок-сервер
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Проверяем метод и заголовок
+		if r.Method != "POST" {
+			t.Errorf("Expected POST request, got %s", r.Method)
+		}
+		if r.Header.Get("Content-Type") != "text/plain" {
+			t.Error("Expected Content-Type: text/plain")
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	c := client{httpClient: &http.Client{}}
+	err := c.SendPostRequest(ts.URL)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+func Test_client_SendPostRequestWithBody1(t *testing.T) {
+	// Создаем мок-сервер
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Проверяем метод и заголовок
+		if r.Method != "POST" {
+			t.Errorf("Expected POST request, got %s", r.Method)
+		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Error("Expected Content-Type: application/json")
+		}
+		if r.Header.Get("Content-Encoding") != "gzip" {
+			t.Error("Expected Content-Encoding: gzip")
+		}
+		if r.Header.Get("Accept-Encoding") != "gzip" {
+			t.Error("Expected Accept-Encoding: gzip")
+		}
+		if r.Header.Get("X-Real-IP") != "127.0.0.1" {
+			t.Error(r.Header.Get("X-Real-IP"))
+			t.Error("Expected X-Real-IP: gzip")
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	c := client{httpClient: &http.Client{}}
+	r := request{
+		IP: "127.0.0.1",
+	}
+	flags := SystemConfigFlags{}
+	err := c.SendPostRequestWithBody(r, ts.URL, []byte("a"), &flags)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+type MockClient struct {
+	ShouldFail   bool
+	Attempts     int
+	ExpectedURL  string
+	ExpectedBody []byte
+}
+
+func (m *MockClient) SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags) error {
+	m.Attempts++
+
+	if url != m.ExpectedURL {
+		return fmt.Errorf("unexpected URL: %s", url)
+	}
+
+	if !bytes.Equal(body, m.ExpectedBody) {
+		return fmt.Errorf("unexpected body")
+	}
+
+	if m.ShouldFail {
+		return &internalErrors.RequestError{Err: errors.New("mock error")}
+	}
+	return nil
+}
+
+func (m *MockClient) SendPostRequest(url string) error {
+	return nil
+}
+
+func (m *MockClient) NewRequest(method string, url string) (*http.Request, error) {
+	return http.NewRequest(method, url, nil)
+}
+
+func TestSendMetrics_SuccessWithMock(t *testing.T) {
+	// 1. Подготавливаем мок
+	mockClient := &MockClient{
+		ExpectedURL:  "http://test",
+		ExpectedBody: []byte(`{"metric":"value"}`), // Зависит от вашего CollectMetricsRequestBodies
+	}
+
+	// 2. Тестовые данные
+	r := request{}
+	monitor := &storage.Monitor{} // Заполните данными, которые вернут ожидаемый body
+	flags := &SystemConfigFlags{}
+
+	// 3. Запуск
+	SendMetrics(r, mockClient, mockClient.ExpectedURL, monitor, flags)
+
+	// 4. Проверки
+	if mockClient.Attempts != 1 {
+		t.Errorf("Expected 1 attempt, got %d", mockClient.Attempts)
 	}
 }

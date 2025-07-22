@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"os"
 	"reflect"
 	"strconv"
 	"sync"
@@ -44,7 +46,7 @@ type Clienter interface {
 // JSONClienter работа с клиентом в формате json
 type JSONClienter interface {
 	Clienter
-	SendPostRequestWithBody(url string, body []byte, flags *SystemConfigFlags) error
+	SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags) error
 }
 
 type client struct {
@@ -52,6 +54,7 @@ type client struct {
 }
 
 type request struct {
+	IP string
 }
 
 func NewClient() Clienter {
@@ -67,7 +70,25 @@ func NewJSONClient() JSONClienter {
 }
 
 func NewRequest() Requester {
-	return request{}
+	req := request{}
+	ip, err := req.getOutboundIP()
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "IP")
+	}
+	req.IP = ip
+	return req
+}
+
+func (r request) getOutboundIP() (string, error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return "", err
+	}
+	addrs, err := net.LookupHost(hostname)
+	if err != nil || len(addrs) == 0 {
+		return "", fmt.Errorf("cannot determine IP")
+	}
+	return addrs[0], nil
 }
 
 // SendPostRequest отправка пост запроса
@@ -83,7 +104,7 @@ func (c client) SendPostRequest(url string) error {
 }
 
 // SendPostRequestWithBody отправляет пост запроса с телом
-func (c client) SendPostRequestWithBody(url string, body []byte, flags *SystemConfigFlags) error {
+func (c client) SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags) error {
 	var err error
 	data := body
 
@@ -103,6 +124,7 @@ func (c client) SendPostRequestWithBody(url string, body []byte, flags *SystemCo
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("Accept-Encoding", "gzip")
+	req.Header.Set("X-Real-IP", r.IP)
 
 	if flags.HashKey != "" {
 		hashSha256 := hash.CreateSha256(body, flags.HashKey)
@@ -225,7 +247,7 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int, flags *SystemConf
 					logger.WriteErrorLog("Error marshal metrics", err.Error())
 				}
 
-				err = c.SendPostRequestWithBody(url, body, flags)
+				err = c.SendPostRequestWithBody(r, url, body, flags)
 				if err != nil {
 					logger.WriteErrorLog("Error in request", err.Error())
 				}
@@ -287,7 +309,7 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh c
 			log.Println("send metrics json count value=", mon.GetCountValue())
 
 			for worker := 0; worker < flags.RateLimit; worker++ {
-				go SendMetrics(c, url, mon, flags)
+				go SendMetrics(r, c, url, mon, flags)
 			}
 
 			mu.Lock()
@@ -295,11 +317,14 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh c
 			mu.Unlock()
 			log.Println("send metrics json end")
 
-			<-ctxGrSh.Done() // Ожидаем сигнал завершения:
-			tickerReport.Stop()
-			tickerPool.Stop()
-			shutdown = true
-			log.Println("graceful shutdown signal received")
+			select {
+			case <-ctxGrSh.Done():
+				tickerReport.Stop()
+				tickerPool.Stop()
+				shutdown = true
+				log.Println("graceful shutdown signal received")
+			default:
+			}
 		}
 	}()
 
@@ -311,11 +336,11 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh c
 	}
 }
 
-func retryToSendMetrics(c JSONClienter, url string, body []byte, tries []int, flags *SystemConfigFlags) error {
+func retryToSendMetrics(r request, c JSONClienter, url string, body []byte, tries []int, flags *SystemConfigFlags) error {
 	var err error
 	for try := 0; try < len(tries); try++ {
 		time.Sleep(time.Duration(tries[try]) * time.Second)
-		err = c.SendPostRequestWithBody(url, body, flags)
+		err = c.SendPostRequestWithBody(r, url, body, flags)
 		if err == nil {
 			break
 		}
@@ -398,15 +423,15 @@ func CollectGopsutilMetrics(monitor *storage.Monitor, wg *sync.WaitGroup) {
 }
 
 // SendMetrics отправляет метрики(несколько раз в случае неудачной отправки)
-func SendMetrics(c JSONClienter, url string, monitor *storage.Monitor, flags *SystemConfigFlags) {
+func SendMetrics(r request, c JSONClienter, url string, monitor *storage.Monitor, flags *SystemConfigFlags) {
 	var err error
 	body := CollectMetricsRequestBodies(monitor)
 
-	if err = c.SendPostRequestWithBody(url, body, flags); err != nil {
+	if err = c.SendPostRequestWithBody(r, url, body, flags); err != nil {
 		logger.WriteErrorLog(err.Error(), "Error in request")
 		var reqErr *internalErrors.RequestError
 		if errors.Is(err, reqErr) || errors.Is(err, syscall.ECONNREFUSED) {
-			err = retryToSendMetrics(c, url, body, internalErrors.TriesTimes, flags)
+			err = retryToSendMetrics(r, c, url, body, internalErrors.TriesTimes, flags)
 			if err != nil {
 				logger.WriteErrorLog(err.Error(), "Error in retry request")
 			}
