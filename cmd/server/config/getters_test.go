@@ -17,6 +17,7 @@ func TestAgentConfig_Get(t *testing.T) {
 		HashKey         string
 		CryptoKey       string
 		StoreInterval   string
+		TrustedSubnet   string
 	}
 	type wantConf struct {
 		Restore         *bool
@@ -25,6 +26,7 @@ func TestAgentConfig_Get(t *testing.T) {
 		DatabaseDSN     string
 		HashKey         string
 		CryptoKey       string
+		TrustedSubnet   string
 		StoreInterval   int
 	}
 	tests := []struct {
@@ -43,6 +45,7 @@ func TestAgentConfig_Get(t *testing.T) {
 				DatabaseDSN:     "testdatabase",
 				HashKey:         "testhashkey",
 				CryptoKey:       "testcryptokey",
+				TrustedSubnet:   "testtrustedsubnet",
 				StoreInterval:   "1",
 				Restore:         &restoreFalse,
 			},
@@ -52,6 +55,7 @@ func TestAgentConfig_Get(t *testing.T) {
 				DatabaseDSN:     "testdatabase",
 				HashKey:         "testhashkey",
 				CryptoKey:       "testcryptokey",
+				TrustedSubnet:   "testtrustedsubnet",
 				StoreInterval:   1,
 				Restore:         &restoreFalse,
 			},
@@ -68,6 +72,7 @@ func TestAgentConfig_Get(t *testing.T) {
 				DatabaseDSN:     "default",
 				HashKey:         "default",
 				CryptoKey:       "default",
+				TrustedSubnet:   "default",
 				StoreInterval:   100,
 				Restore:         &restoreTrue,
 			},
@@ -84,6 +89,7 @@ func TestAgentConfig_Get(t *testing.T) {
 				DatabaseDSN:     tt.conf.DatabaseDSN,
 				HashKey:         tt.conf.HashKey,
 				CryptoKey:       tt.conf.CryptoKey,
+				TrustedSubnet:   tt.conf.TrustedSubnet,
 				StoreInterval:   tt.conf.StoreInterval,
 				Restore:         tt.conf.Restore,
 			}
@@ -94,6 +100,7 @@ func TestAgentConfig_Get(t *testing.T) {
 			assert.Equalf(t, tt.wantConf.CryptoKey, cfg.GetCryptoKey(tt.defaultStringValue), "GetCryptoKey(%v)", tt.defaultStringValue)
 			assert.Equalf(t, tt.wantConf.StoreInterval, cfg.GetStoreInterval(tt.defaultIntValue), "GetHashKey(%v)", tt.defaultIntValue)
 			assert.Equalf(t, *(tt.wantConf.Restore), cfg.GetRestore(tt.defaultBoolValue), "GetHashKey(%v)", tt.defaultBoolValue)
+			assert.Equalf(t, tt.wantConf.TrustedSubnet, cfg.GetTrustedSubnet(tt.defaultStringValue), "GetTrustedSubnet(%v)", tt.defaultStringValue)
 		})
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v6"
+
 	"github.com/ramil063/gometrics/internal/logger"
 )
 
@@ -25,6 +26,7 @@ type ServerConfig struct {
 	HashKey         string `json:"hash_key"`
 	CryptoKey       string `json:"crypto_key"`
 	StoreInterval   string `json:"store_interval"`
+	TrustedSubnet   string `json:"trusted_subnet"`
 }
 
 // loadConfig загружает конфигурацию из файла

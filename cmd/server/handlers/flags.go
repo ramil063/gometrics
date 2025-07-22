@@ -28,6 +28,9 @@ var HashKey = ""
 // CryptoKey путь до приватного ключа шифрования
 var CryptoKey = ""
 
+// TrustedSubnet доверенная подсеть для пропуска на сервер
+var TrustedSubnet = ""
+
 // EnvVars содержит переменные флагов
 type EnvVars struct {
 	Address         string `env:"ADDRESS"`
@@ -35,6 +38,7 @@ type EnvVars struct {
 	DatabaseDSN     string `env:"DATABASE_DSN"`
 	HashKey         string `env:"KEY"`
 	CryptoKey       string `env:"CRYPTO_KEY"`
+	TrustedSubnet   string `env:"TRUSTED_SUBNET"`
 	StoreInterval   int    `env:"STORE_INTERVAL"`
 	Restore         bool   `env:"RESTORE"`
 }
@@ -48,6 +52,7 @@ func InitFlags(config *serverConfig.ServerConfig) {
 	flag.BoolVar(&Restore, "r", config.GetRestore(true), "file storage path")
 	flag.StringVar(&HashKey, "k", config.GetHashKey(""), "key for hash")
 	flag.StringVar(&CryptoKey, "crypto-key", config.GetCryptoKey(""), "key for encryption")
+	flag.StringVar(&TrustedSubnet, "t", config.GetTrustedSubnet(""), "allowed subnet")
 	flag.Parse()
 
 	var ev EnvVars
@@ -79,6 +84,10 @@ func InitFlags(config *serverConfig.ServerConfig) {
 
 	if ev.CryptoKey != "" {
 		CryptoKey = ev.CryptoKey
+	}
+
+	if ev.TrustedSubnet != "" {
+		TrustedSubnet = ev.TrustedSubnet
 	}
 
 	//only for autotests
