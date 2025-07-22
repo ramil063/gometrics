@@ -335,10 +335,10 @@ func Test_client_SendPostRequestWithBody1(t *testing.T) {
 }
 
 type MockClient struct {
-	ShouldFail   bool
-	Attempts     int
 	ExpectedURL  string
 	ExpectedBody []byte
+	Attempts     int
+	ShouldFail   bool
 }
 
 func (m *MockClient) SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags) error {
