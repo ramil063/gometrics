@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	agentConfig "github.com/ramil063/gometrics/cmd/agent/config"
 	"github.com/ramil063/gometrics/cmd/agent/handlers"
+	"github.com/ramil063/gometrics/cmd/agent/handlers/grpc"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/security/crypto"
 )
@@ -45,8 +47,16 @@ func main() {
 	ctxGrSh, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 
+	var serversWg sync.WaitGroup
+	serversWg.Add(1)
+
+	go grpc.StartClient(ctxGrSh, &serversWg)
+
+	serversWg.Add(1)
 	c := handlers.NewJSONClient()
 	r := handlers.NewRequest()
-	r.SendMultipleMetricsJSON(c, -1, ctxGrSh, flags)
+	go r.SendMultipleMetricsJSON(c, -1, ctxGrSh, flags, &serversWg)
+
+	serversWg.Wait()
 	fmt.Println("Server shutdown gracefully")
 }

@@ -13,9 +13,9 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-
 	serverConfig "github.com/ramil063/gometrics/cmd/server/config"
 	"github.com/ramil063/gometrics/cmd/server/handlers"
+	serverGRPC "github.com/ramil063/gometrics/cmd/server/handlers/grpc/server"
 	"github.com/ramil063/gometrics/cmd/server/handlers/server"
 	"github.com/ramil063/gometrics/cmd/server/storage/db"
 	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
@@ -92,6 +92,11 @@ func main() {
 		Handler: server.Router(s),
 	}
 
+	grpcServer, err := serverGRPC.GetGRPCServer()
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "GetGRPCServer init error")
+	}
+
 	// через этот канал сообщим основному потоку, что соединения закрыты
 	idleConnsClosed := make(chan struct{})
 	// регистрируем перенаправление прерываний
@@ -111,6 +116,7 @@ func main() {
 			// ошибки закрытия Listener
 			log.Printf("HTTP server Shutdown error: %v", err)
 		}
+		grpcServer.GracefulStop()
 
 		// сообщаем основному потоку,
 		// что все сетевые соединения обработаны и закрыты

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -17,6 +16,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ramil063/gometrics/cmd/agent/handlers/gzip"
+	metricsHandler "github.com/ramil063/gometrics/cmd/agent/handlers/metrics"
 	"github.com/ramil063/gometrics/cmd/agent/storage"
 	internalErrors "github.com/ramil063/gometrics/internal/errors"
 	"github.com/ramil063/gometrics/internal/hash"
@@ -28,7 +29,7 @@ import (
 // JSONRequester отправляет данные в формате json
 type JSONRequester interface {
 	SendMetricsJSON(c JSONClienter, maxCount int, flags *SystemConfigFlags) error
-	SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh context.Context, flags *SystemConfigFlags)
+	SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh context.Context, flags *SystemConfigFlags, serversWg *sync.WaitGroup)
 }
 
 // Requester отправляет данные
@@ -115,7 +116,7 @@ func (c client) SendPostRequestWithBody(r request, url string, body []byte, flag
 		}
 	}
 
-	data, err = compressData(data)
+	data, err = gzip.CompressData(data)
 	if err != nil {
 		return err
 	}
@@ -258,7 +259,8 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int, flags *SystemConf
 }
 
 // SendMultipleMetricsJSON отправка нескольких метрик
-func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh context.Context, flags *SystemConfigFlags) {
+func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh context.Context, flags *SystemConfigFlags, serversWg *sync.WaitGroup) {
+	defer serversWg.Done()
 	var pollInterval = time.Duration(flags.PollInterval) * time.Second
 	var reportInterval = time.Duration(flags.ReportInterval) * time.Second
 	count := 0
@@ -287,8 +289,8 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh c
 
 			log.Println("get metrics json start")
 			var collectWg sync.WaitGroup
-			CollectMonitorMetrics(count, &monitor, &collectWg)
-			CollectGopsutilMetrics(&monitor, &collectWg)
+			metricsHandler.CollectMonitorMetrics(count, &monitor, &collectWg)
+			metricsHandler.CollectGopsutilMetrics(&monitor, &collectWg)
 			collectWg.Wait()
 
 			sendMonitor <- &monitor
@@ -349,83 +351,10 @@ func retryToSendMetrics(r request, c JSONClienter, url string, body []byte, trie
 	return err
 }
 
-// CollectMetricsRequestBodies сбор метрик в тела для отправки на сторонний сервис
-func CollectMetricsRequestBodies(monitor *storage.Monitor) []byte {
-	v := reflect.ValueOf(monitor).Elem()
-	typeOfS := v.Type()
-	allMetrics := make([]models.Metrics, 0, 100)
-
-	for i := 0; i < v.NumField(); i++ {
-		metricID := typeOfS.Field(i).Name
-
-		if metricID == "mx" {
-			continue
-		}
-
-		metricValue, _ := strconv.ParseFloat(fmt.Sprintf("%v", v.Field(i).Interface()), 64)
-		delta := int64(monitor.GetCountValue())
-
-		if metricID == "CPUutilization" {
-			CPUutilization := monitor.GetAllCPUutilization()
-			for j, value := range CPUutilization {
-				valuePtr := float64(value)
-				metrics := models.Metrics{
-					ID:    "CPUutilization" + strconv.Itoa(j),
-					MType: "gauge",
-					Delta: nil,
-					Value: &valuePtr,
-				}
-				allMetrics = append(allMetrics, metrics)
-			}
-			continue
-		}
-		metrics := models.Metrics{
-			ID:    metricID,
-			MType: "gauge",
-			Delta: nil,
-			Value: &metricValue,
-		}
-
-		if typeOfS.Field(i).Name == "PollCount" {
-			metrics.MType = "counter"
-			metrics.Delta = &delta
-			metrics.Value = nil
-		}
-		allMetrics = append(allMetrics, metrics)
-	}
-	body, err := json.Marshal(allMetrics)
-	if err != nil {
-		logger.WriteErrorLog("Error marshal metrics", err.Error())
-	}
-	return body
-}
-
-// CollectMonitorMetrics собирает метрики монитора
-func CollectMonitorMetrics(count int, monitor *storage.Monitor, wg *sync.WaitGroup) {
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		storage.SetMetricsToMonitor(monitor)
-		monitor.StoreCountValue(count)
-	}()
-}
-
-// CollectGopsutilMetrics собирает метрики через gopsutil
-func CollectGopsutilMetrics(monitor *storage.Monitor, wg *sync.WaitGroup) {
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := storage.SetGopsutilMetricsToMonitor(monitor)
-		if err != nil {
-			logger.WriteErrorLog(err.Error(), "Error in set gopsutil metrics")
-		}
-	}()
-}
-
 // SendMetrics отправляет метрики(несколько раз в случае неудачной отправки)
 func SendMetrics(r request, c JSONClienter, url string, monitor *storage.Monitor, flags *SystemConfigFlags) {
 	var err error
-	body := CollectMetricsRequestBodies(monitor)
+	body := metricsHandler.CollectMetricsRequestBodies(monitor)
 
 	if err = c.SendPostRequestWithBody(r, url, body, flags); err != nil {
 		logger.WriteErrorLog(err.Error(), "Error in request")
@@ -437,21 +366,4 @@ func SendMetrics(r request, c JSONClienter, url string, monitor *storage.Monitor
 			}
 		}
 	}
-}
-
-// compressData Функция для сжатия данных
-func compressData(data []byte) ([]byte, error) {
-	var buf bytes.Buffer
-	gz := gzip.NewWriter(&buf)
-
-	_, err := gz.Write(data)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = gz.Close(); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
 }
