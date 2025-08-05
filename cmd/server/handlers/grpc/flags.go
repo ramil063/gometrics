@@ -104,7 +104,7 @@ func applyFlags(
 	if storeInterval != 0 && storeInterval != flags.StoreInterval {
 		flags.StoreInterval = storeInterval
 	}
-	if restore != false && restore != flags.Restore {
+	if restore && restore != flags.Restore {
 		flags.Restore = restore
 	}
 }
@@ -132,7 +132,7 @@ func applyEnvVars(flags *ServerConfigFlags, envVars ServerConfigFlags) {
 	if envVars.StoreInterval != 0 {
 		flags.StoreInterval = envVars.StoreInterval
 	}
-	if envVars.Restore != false {
+	if envVars.Restore {
 		flags.Restore = envVars.Restore
 	}
 }
