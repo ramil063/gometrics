@@ -6,6 +6,8 @@ import (
 	"net"
 	"time"
 
+	"google.golang.org/grpc"
+
 	grpcServerConfig "github.com/ramil063/gometrics/cmd/server/config/grpc"
 	grpcHandlers "github.com/ramil063/gometrics/cmd/server/handlers/grpc"
 	"github.com/ramil063/gometrics/cmd/server/handlers/grpc/interceptors"
@@ -15,9 +17,10 @@ import (
 	"github.com/ramil063/gometrics/cmd/server/storage/file"
 	pb "github.com/ramil063/gometrics/internal/grpc/proto"
 	"github.com/ramil063/gometrics/internal/logger"
-	"google.golang.org/grpc"
+	"github.com/ramil063/gometrics/internal/security/crypto"
 )
 
+// GetGRPCServer возвращает настроенный и запущенный gRPC сервер
 func GetGRPCServer() (*grpc.Server, error) {
 	configGRPC, err := grpcServerConfig.GetConfig()
 	if err != nil {
@@ -64,6 +67,13 @@ func GetGRPCServer() (*grpc.Server, error) {
 		}()
 	}
 
+	if flagsGRPC.CryptoKey != "" {
+		crypto.GRPCDecryptor, err = crypto.NewRSADecryptor(flagsGRPC.CryptoKey)
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "Failed to create grpc decryptor")
+		}
+	}
+
 	lis, err := net.Listen("tcp", flagsGRPC.Address)
 	if err != nil {
 		logger.WriteErrorLog(err.Error(), "TCP listen")
@@ -73,8 +83,9 @@ func GetGRPCServer() (*grpc.Server, error) {
 	trustedIPUnaryInterceptor := interceptors.NewTrustedIPInterceptor(flagsGRPC.TrustedSubnet)
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			interceptors.HashCheckUnaryInterceptor,
 			trustedIPUnaryInterceptor,
+			interceptors.DecryptUnaryInterceptor,
+			interceptors.HashCheckUnaryInterceptor,
 		),
 	)
 	pb.RegisterMetricsServer(grpcServer, NewMetricsServer(grpcStorage))

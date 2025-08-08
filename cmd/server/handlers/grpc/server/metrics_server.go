@@ -2,13 +2,13 @@ package server
 
 import (
 	"context"
-	"log"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/ramil063/gometrics/cmd/server/handlers/server"
 	pb "github.com/ramil063/gometrics/internal/grpc/proto"
 	"github.com/ramil063/gometrics/internal/models"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type MetricsServer struct {
@@ -17,12 +17,14 @@ type MetricsServer struct {
 	storage server.Storager
 }
 
+// NewMetricsServer получение нового сервера для обновления метрик
 func NewMetricsServer(storage server.Storager) *MetricsServer {
 	return &MetricsServer{
 		storage: storage,
 	}
 }
 
+// UpdateMetrics основная функция обновления метрик
 func (s *MetricsServer) UpdateMetrics(ctx context.Context, req *pb.ListMetricsRequest) (*pb.ListMetricsResponse, error) {
 	// 1. Конвертируем protobuf -> models.Metrics
 	metrics := make([]models.Metrics, 0, len(req.GetMetrics()))
@@ -44,7 +46,7 @@ func (s *MetricsServer) UpdateMetrics(ctx context.Context, req *pb.ListMetricsRe
 		}
 		metrics = append(metrics, m)
 	}
-	log.Println(111, metrics)
+
 	// 2. Вызываем логику обработки
 	result, err := server.UpdateMetrics(s.storage, metrics)
 	if err != nil {

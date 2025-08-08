@@ -138,6 +138,7 @@ func (x *Metric) GetValue() float64 {
 type ListMetricsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Metrics       []*Metric              `protobuf:"bytes,1,rep,name=metrics,proto3" json:"metrics,omitempty"`
+	CryptoMetrics []byte                 `protobuf:"bytes,2,opt,name=cryptoMetrics,proto3" json:"cryptoMetrics,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -179,10 +180,18 @@ func (x *ListMetricsRequest) GetMetrics() []*Metric {
 	return nil
 }
 
+func (x *ListMetricsRequest) GetCryptoMetrics() []byte {
+	if x != nil {
+		return x.CryptoMetrics
+	}
+	return nil
+}
+
 type ListMetricsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Metrics       []*Metric              `protobuf:"bytes,1,rep,name=metrics,proto3" json:"metrics,omitempty"`
 	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	CryptoMetrics []byte                 `protobuf:"bytes,3,opt,name=cryptoMetrics,proto3" json:"cryptoMetrics,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -231,6 +240,13 @@ func (x *ListMetricsResponse) GetError() string {
 	return ""
 }
 
+func (x *ListMetricsResponse) GetCryptoMetrics() []byte {
+	if x != nil {
+		return x.CryptoMetrics
+	}
+	return nil
+}
+
 var File_proto_metrics_proto protoreflect.FileDescriptor
 
 const file_proto_metrics_proto_rawDesc = "" +
@@ -244,12 +260,14 @@ const file_proto_metrics_proto_rawDesc = "" +
 	"\n" +
 	"MetricType\x12\t\n" +
 	"\x05gauge\x10\x00\x12\v\n" +
-	"\acounter\x10\x01\"?\n" +
+	"\acounter\x10\x01\"e\n" +
 	"\x12ListMetricsRequest\x12)\n" +
-	"\ametrics\x18\x01 \x03(\v2\x0f.metrics.MetricR\ametrics\"V\n" +
+	"\ametrics\x18\x01 \x03(\v2\x0f.metrics.MetricR\ametrics\x12$\n" +
+	"\rcryptoMetrics\x18\x02 \x01(\fR\rcryptoMetrics\"|\n" +
 	"\x13ListMetricsResponse\x12)\n" +
 	"\ametrics\x18\x01 \x03(\v2\x0f.metrics.MetricR\ametrics\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error2U\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error\x12$\n" +
+	"\rcryptoMetrics\x18\x03 \x01(\fR\rcryptoMetrics2U\n" +
 	"\aMetrics\x12J\n" +
 	"\rUpdateMetrics\x12\x1b.metrics.ListMetricsRequest\x1a\x1c.metrics.ListMetricsResponseB\x0eZ\fgrpc/metricsb\x06proto3"
 

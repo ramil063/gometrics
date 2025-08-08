@@ -17,11 +17,13 @@ message Metric {
 
 message ListMetricsRequest {
   repeated Metric metrics = 1;
+  bytes cryptoMetrics = 2;
 }
 
 message ListMetricsResponse {
   repeated Metric metrics = 1;
   string error = 2;
+  bytes cryptoMetrics = 3;
 }
 
 service Metrics {

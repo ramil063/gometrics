@@ -19,9 +19,9 @@ func HashCheckUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.
 	if handlers.HashKey == "" {
 		return handler(ctx, req)
 	}
-
 	// Получаем метаданные из контекста
 	md, ok := metadata.FromIncomingContext(ctx)
+
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "grpc: metadata is required")
 	}
@@ -29,7 +29,7 @@ func HashCheckUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.
 	// 1. Проверка входящего хеша
 	if reqBytes, ok := req.([]byte); ok {
 		// Получаем хеш из заголовков
-		headerHashSHA256 := getFirstValue(md, "HashSHA256")
+		headerHashSHA256 := getFirstValue(md, "hashsha256")
 		if headerHashSHA256 == "" {
 			return nil, status.Error(codes.InvalidArgument, "grpc: hash is empty")
 		}
@@ -53,7 +53,7 @@ func HashCheckUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.
 		respHash := hash.CreateSha256(respBytes, handlers.HashKey)
 
 		// Устанавливаем заголовок с хешем
-		header := metadata.Pairs("HashSHA256", respHash)
+		header := metadata.Pairs("hashsha256", respHash)
 		if err = grpc.SetHeader(ctx, header); err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to set header: %v", err)
 		}

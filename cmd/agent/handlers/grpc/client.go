@@ -10,6 +10,7 @@ import (
 	pb "github.com/ramil063/gometrics/internal/grpc/proto"
 	"github.com/ramil063/gometrics/internal/hash"
 	"github.com/ramil063/gometrics/internal/logger"
+	"github.com/ramil063/gometrics/internal/security/crypto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -67,10 +68,26 @@ func (c *Client) SendMetrics(r request, metrics []*pb.Metric, flags *SystemConfi
 		md.Set("hashsha256", hashSha256) // Добавляем хеш в метаданные
 	}
 
+	var encryptedData []byte
+	if crypto.GRPCEncryptor != nil {
+		// Сериализуем метрики в байты для хеширования
+		body, err := proto.Marshal(&pb.ListMetricsRequest{Metrics: metrics})
+		if err != nil {
+			return fmt.Errorf("failed to marshal metrics: %w", err)
+		}
+
+		encryptedData, err = crypto.GRPCEncryptor.Encrypt(body)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt metrics: %w", err)
+		}
+		metrics = []*pb.Metric{}
+	}
+
 	// Прикрепляем метаданные к контексту
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	resp, err := c.client.UpdateMetrics(ctx, &pb.ListMetricsRequest{
-		Metrics: metrics,
+		Metrics:       metrics,
+		CryptoMetrics: encryptedData,
 	})
 
 	if err != nil {
@@ -102,6 +119,15 @@ func StartClient(ctxGrSh context.Context, serversWg *sync.WaitGroup) {
 	if flagsGRPC != nil && flagsGRPC.Address != "" {
 		address = flagsGRPC.Address
 	}
+
+	if flagsGRPC != nil && flagsGRPC.CryptoKey != "" {
+		crypto.GRPCEncryptor, err = crypto.NewRSAEncryptor(flagsGRPC.CryptoKey)
+
+		if err != nil {
+			logger.WriteErrorLog(err.Error(), "Failed to create encryptor")
+		}
+	}
+
 	grpcClient, err := NewGRPCClient(address)
 	if err != nil {
 		log.Println("NewGRPCClient error:", err)

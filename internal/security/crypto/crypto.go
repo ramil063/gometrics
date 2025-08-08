@@ -17,6 +17,8 @@ type Decryptor interface {
 // DefaultEncryptor стандартный шифровщик
 var DefaultEncryptor Encryptor
 var DefaultDecryptor Decryptor
+var GRPCEncryptor Encryptor
+var GRPCDecryptor Decryptor
 
 // NewRSAEncryptor фабрика для RSA
 func NewRSAEncryptor(publicKeyPath string) (Encryptor, error) {
