@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"testing"
 
@@ -145,20 +144,16 @@ func Test_request_getOutboundIP(t *testing.T) {
 		IP string
 	}
 	tests := []struct {
-		fields  fields
-		wantErr assert.ErrorAssertionFunc
-		name    string
-		want    string
+		fields fields
+		name   string
+		want   string
 	}{
 		{
 			name: "test 1",
 			fields: fields{
-				IP: "127.0.0.1",
+				IP: "127.0.1.1",
 			},
-			want: "127.0.0.1",
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return false
-			},
+			want: "127.0.1.1",
 		},
 	}
 	for _, tt := range tests {
@@ -167,9 +162,7 @@ func Test_request_getOutboundIP(t *testing.T) {
 				IP: tt.fields.IP,
 			}
 			got, err := r.getOutboundIP()
-			if !tt.wantErr(t, err, fmt.Sprintf("getOutboundIP()")) {
-				return
-			}
+			assert.NoError(t, err)
 			assert.Equalf(t, tt.want, got, "getOutboundIP()")
 		})
 	}
