@@ -7,7 +7,6 @@ import (
 	"encoding/pem"
 	"os"
 	"reflect"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -84,320 +83,81 @@ func TestNewRSAEncryptor(t *testing.T) {
 }
 
 func TestManager_GetGRPCDecryptor(t *testing.T) {
-	type fields struct {
-		defaultEncryptor Encryptor
-		defaultDecryptor Decryptor
-		grpcEncryptor    Encryptor
-		grpcDecryptor    Decryptor
-		mx               sync.RWMutex
-	}
 	var decryptor Decryptor
-	tests := []struct {
-		name   string
-		fields fields
-		want   Decryptor
-	}{
-		{
-			name: "test1",
-			fields: fields{
-				defaultDecryptor: nil,
-				defaultEncryptor: nil,
-				grpcEncryptor:    nil,
-				grpcDecryptor:    decryptor,
-			},
-			want: decryptor,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	t.Run("GetGRPCDecryptor", func(t *testing.T) {
 
-			cm := &Manager{
-				defaultEncryptor: tt.fields.defaultEncryptor,
-				defaultDecryptor: tt.fields.defaultDecryptor,
-				grpcEncryptor:    tt.fields.grpcEncryptor,
-				grpcDecryptor:    tt.fields.grpcDecryptor,
-				mx:               tt.fields.mx,
-			}
-			assert.Equalf(t, tt.want, cm.GetGRPCDecryptor(), "GetGRPCDecryptor()")
-		})
-	}
+		cm := &Manager{
+			grpcDecryptor: decryptor,
+		}
+		assert.Equalf(t, decryptor, cm.GetGRPCDecryptor(), "GetGRPCDecryptor()")
+	})
 }
 
 func TestManager_GetDefaultDecryptor(t *testing.T) {
-	type fields struct {
-		defaultEncryptor Encryptor
-		defaultDecryptor Decryptor
-		grpcEncryptor    Encryptor
-		grpcDecryptor    Decryptor
-		mx               sync.RWMutex
-	}
 	var decryptor Decryptor
-	tests := []struct {
-		name   string
-		fields fields
-		want   Decryptor
-	}{
-		{
-			name: "test1",
-			fields: fields{
-				defaultEncryptor: nil,
-				defaultDecryptor: decryptor,
-				grpcEncryptor:    nil,
-				grpcDecryptor:    nil,
-			},
-			want: decryptor,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cm := &Manager{
-				defaultEncryptor: tt.fields.defaultEncryptor,
-				defaultDecryptor: tt.fields.defaultDecryptor,
-				grpcEncryptor:    tt.fields.grpcEncryptor,
-				grpcDecryptor:    tt.fields.grpcDecryptor,
-				mx:               tt.fields.mx,
-			}
-			assert.Equalf(t, tt.want, cm.GetDefaultDecryptor(), "GetDefaultDecryptor()")
-		})
-	}
+	t.Run("GetDefaultDecryptor", func(t *testing.T) {
+		cm := &Manager{
+			defaultDecryptor: decryptor,
+		}
+		assert.Equalf(t, decryptor, cm.GetDefaultDecryptor(), "GetDefaultDecryptor()")
+	})
 }
 
 func TestManager_GetDefaultEncryptor(t *testing.T) {
-	type fields struct {
-		defaultEncryptor Encryptor
-		defaultDecryptor Decryptor
-		grpcEncryptor    Encryptor
-		grpcDecryptor    Decryptor
-		mx               sync.RWMutex
-	}
 	var encryptor Encryptor
-	tests := []struct {
-		name   string
-		fields fields
-		want   Encryptor
-	}{
-		{
-			name: "test1",
-			fields: fields{
-				defaultEncryptor: encryptor,
-				defaultDecryptor: nil,
-				grpcEncryptor:    nil,
-				grpcDecryptor:    nil,
-			},
-			want: encryptor,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cm := &Manager{
-				defaultEncryptor: tt.fields.defaultEncryptor,
-				defaultDecryptor: tt.fields.defaultDecryptor,
-				grpcEncryptor:    tt.fields.grpcEncryptor,
-				grpcDecryptor:    tt.fields.grpcDecryptor,
-				mx:               tt.fields.mx,
-			}
-			assert.Equalf(t, tt.want, cm.GetDefaultEncryptor(), "GetDefaultEncryptor()")
-		})
-	}
+	t.Run("GetDefaultEncryptor", func(t *testing.T) {
+		cm := &Manager{
+			defaultEncryptor: encryptor,
+		}
+		assert.Equalf(t, encryptor, cm.GetDefaultEncryptor(), "GetDefaultEncryptor()")
+	})
 }
 
 func TestManager_GetGRPCEncryptor(t *testing.T) {
-	type fields struct {
-		defaultEncryptor Encryptor
-		defaultDecryptor Decryptor
-		grpcEncryptor    Encryptor
-		grpcDecryptor    Decryptor
-		mx               sync.RWMutex
-	}
 	var encryptor Encryptor
-	tests := []struct {
-		name   string
-		fields fields
-		want   Encryptor
-	}{
-		{
-			name: "test1",
-			fields: fields{
-				defaultEncryptor: nil,
-				defaultDecryptor: nil,
-				grpcEncryptor:    encryptor,
-				grpcDecryptor:    nil,
-			},
-			want: encryptor,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cm := &Manager{
-				defaultEncryptor: tt.fields.defaultEncryptor,
-				defaultDecryptor: tt.fields.defaultDecryptor,
-				grpcEncryptor:    tt.fields.grpcEncryptor,
-				grpcDecryptor:    tt.fields.grpcDecryptor,
-				mx:               tt.fields.mx,
-			}
-			assert.Equalf(t, tt.want, cm.GetGRPCEncryptor(), "GetGRPCEncryptor()")
-		})
-	}
+	t.Run("GetGRPCEncryptor", func(t *testing.T) {
+		cm := &Manager{
+			grpcEncryptor: encryptor,
+		}
+		assert.Equalf(t, encryptor, cm.GetGRPCEncryptor(), "GetGRPCEncryptor()")
+	})
 }
 
 func TestManager_SetDefaultDecryptor(t *testing.T) {
-	type fields struct {
-		defaultEncryptor Encryptor
-		defaultDecryptor Decryptor
-		grpcEncryptor    Encryptor
-		grpcDecryptor    Decryptor
-		mx               sync.RWMutex
-	}
-	type args struct {
-		decr Decryptor
-	}
 	var decryptor Decryptor
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		{
-			name:   "test1",
-			fields: fields{},
-			args: args{
-				decr: decryptor,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cm := &Manager{
-				defaultEncryptor: tt.fields.defaultEncryptor,
-				defaultDecryptor: tt.fields.defaultDecryptor,
-				grpcEncryptor:    tt.fields.grpcEncryptor,
-				grpcDecryptor:    tt.fields.grpcDecryptor,
-				mx:               tt.fields.mx,
-			}
-			cm.SetDefaultDecryptor(tt.args.decr)
-			assert.Equalf(t, tt.args.decr, cm.GetDefaultDecryptor(), "GetDefaultDecryptor()")
-		})
-	}
+	t.Run("SetDefaultDecryptor", func(t *testing.T) {
+		cm := &Manager{}
+		cm.SetDefaultDecryptor(decryptor)
+		assert.Equalf(t, decryptor, cm.GetDefaultDecryptor(), "GetDefaultDecryptor()")
+	})
 }
 
 func TestManager_SetDefaultEncryptor(t *testing.T) {
-	type fields struct {
-		defaultEncryptor Encryptor
-		defaultDecryptor Decryptor
-		grpcEncryptor    Encryptor
-		grpcDecryptor    Decryptor
-		mx               sync.RWMutex
-	}
-	type args struct {
-		enc Encryptor
-	}
 	var encryptor Encryptor
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		{
-			name:   "test1",
-			fields: fields{},
-			args: args{
-				enc: encryptor,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cm := &Manager{
-				defaultEncryptor: tt.fields.defaultEncryptor,
-				defaultDecryptor: tt.fields.defaultDecryptor,
-				grpcEncryptor:    tt.fields.grpcEncryptor,
-				grpcDecryptor:    tt.fields.grpcDecryptor,
-				mx:               tt.fields.mx,
-			}
-			cm.SetDefaultEncryptor(tt.args.enc)
-			assert.Equal(t, tt.args.enc, cm.GetDefaultEncryptor(), "GetDefaultEncryptor()")
-		})
-	}
+	t.Run("SetDefaultEncryptor", func(t *testing.T) {
+		cm := &Manager{}
+		cm.SetDefaultEncryptor(encryptor)
+		assert.Equal(t, encryptor, cm.GetDefaultEncryptor(), "GetDefaultEncryptor()")
+	})
 }
 
 func TestManager_SetGRPCDecryptor(t *testing.T) {
-	type fields struct {
-		defaultEncryptor Encryptor
-		defaultDecryptor Decryptor
-		grpcEncryptor    Encryptor
-		grpcDecryptor    Decryptor
-		mx               sync.RWMutex
-	}
-	type args struct {
-		decr Decryptor
-	}
 	var decryptor Decryptor
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		{
-			name:   "test1",
-			fields: fields{},
-			args: args{
-				decr: decryptor,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cm := &Manager{
-				defaultEncryptor: tt.fields.defaultEncryptor,
-				defaultDecryptor: tt.fields.defaultDecryptor,
-				grpcEncryptor:    tt.fields.grpcEncryptor,
-				grpcDecryptor:    tt.fields.grpcDecryptor,
-				mx:               tt.fields.mx,
-			}
-			cm.SetGRPCDecryptor(tt.args.decr)
-			assert.Equal(t, tt.args.decr, cm.GetGRPCDecryptor(), "GetGRPCDecryptor()")
-		})
-	}
+	t.Run("SetGRPCDecryptor", func(t *testing.T) {
+		cm := &Manager{}
+		cm.SetGRPCDecryptor(decryptor)
+		assert.Equal(t, decryptor, cm.GetGRPCDecryptor(), "GetGRPCDecryptor()")
+	})
 }
 
 func TestManager_SetGRPCEncryptor(t *testing.T) {
-	type fields struct {
-		defaultEncryptor Encryptor
-		defaultDecryptor Decryptor
-		grpcEncryptor    Encryptor
-		grpcDecryptor    Decryptor
-		mx               sync.RWMutex
-	}
-	type args struct {
-		enc Encryptor
-	}
 	var encryptor Encryptor
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		{
-			name:   "SetGRPCEncryptor",
-			fields: fields{},
-			args: args{
-				enc: encryptor,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cm := &Manager{
-				defaultEncryptor: tt.fields.defaultEncryptor,
-				defaultDecryptor: tt.fields.defaultDecryptor,
-				grpcEncryptor:    tt.fields.grpcEncryptor,
-				grpcDecryptor:    tt.fields.grpcDecryptor,
-				mx:               tt.fields.mx,
-			}
-			cm.SetGRPCEncryptor(tt.args.enc)
-			assert.Equalf(t, tt.args.enc, cm.GetGRPCEncryptor(), "SetGRPCEncryptor()")
-		})
-	}
+
+	t.Run("SetGRPCEncryptor", func(t *testing.T) {
+		cm := &Manager{}
+		cm.SetGRPCEncryptor(encryptor)
+		assert.Equalf(t, encryptor, cm.GetGRPCEncryptor(), "SetGRPCEncryptor()")
+	})
 }
 
 func TestNewCryptoManager(t *testing.T) {
