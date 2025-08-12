@@ -28,8 +28,8 @@ import (
 
 // JSONRequester отправляет данные в формате json
 type JSONRequester interface {
-	SendMetricsJSON(c JSONClienter, maxCount int, flags *SystemConfigFlags) error
-	SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh context.Context, flags *SystemConfigFlags, serversWg *sync.WaitGroup)
+	SendMetricsJSON(c JSONClienter, maxCount int, flags *SystemConfigFlags, manager *crypto.Manager) error
+	SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh context.Context, flags *SystemConfigFlags, manager *crypto.Manager, serversWg *sync.WaitGroup)
 }
 
 // Requester отправляет данные
@@ -47,7 +47,7 @@ type Clienter interface {
 // JSONClienter работа с клиентом в формате json
 type JSONClienter interface {
 	Clienter
-	SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags) error
+	SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags, manager *crypto.Manager) error
 }
 
 type client struct {
@@ -105,12 +105,13 @@ func (c client) SendPostRequest(url string) error {
 }
 
 // SendPostRequestWithBody отправляет пост запроса с телом
-func (c client) SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags) error {
+func (c client) SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags, manager *crypto.Manager) error {
 	var err error
 	data := body
 
-	if crypto.DefaultEncryptor != nil {
-		data, err = crypto.DefaultEncryptor.Encrypt(data)
+	encryptor := manager.GetDefaultEncryptor()
+	if encryptor != nil {
+		data, err = encryptor.Encrypt(data)
 		if err != nil {
 			return err
 		}
@@ -199,7 +200,7 @@ func (r request) SendMetrics(c Clienter, maxCount int, flags *SystemConfigFlags)
 }
 
 // SendMetricsJSON отправка метрик
-func (r request) SendMetricsJSON(c JSONClienter, maxCount int, flags *SystemConfigFlags) error {
+func (r request) SendMetricsJSON(c JSONClienter, maxCount int, flags *SystemConfigFlags, manager *crypto.Manager) error {
 	var interval = 1 * time.Second
 	count := 0
 	seconds := 0
@@ -248,7 +249,7 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int, flags *SystemConf
 					logger.WriteErrorLog("Error marshal metrics", err.Error())
 				}
 
-				err = c.SendPostRequestWithBody(r, url, body, flags)
+				err = c.SendPostRequestWithBody(r, url, body, flags, manager)
 				if err != nil {
 					logger.WriteErrorLog("Error in request", err.Error())
 				}
@@ -259,7 +260,14 @@ func (r request) SendMetricsJSON(c JSONClienter, maxCount int, flags *SystemConf
 }
 
 // SendMultipleMetricsJSON отправка нескольких метрик
-func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh context.Context, flags *SystemConfigFlags, serversWg *sync.WaitGroup) {
+func (r request) SendMultipleMetricsJSON(
+	c JSONClienter,
+	maxCount int,
+	ctxGrSh context.Context,
+	flags *SystemConfigFlags,
+	manager *crypto.Manager,
+	serversWg *sync.WaitGroup,
+) {
 	defer serversWg.Done()
 	var pollInterval = time.Duration(flags.PollInterval) * time.Second
 	var reportInterval = time.Duration(flags.ReportInterval) * time.Second
@@ -311,7 +319,7 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh c
 			log.Println("send metrics json count value=", mon.GetCountValue())
 
 			for worker := 0; worker < flags.RateLimit; worker++ {
-				go SendMetrics(r, c, url, mon, flags)
+				go SendMetrics(r, c, url, mon, flags, manager)
 			}
 
 			mu.Lock()
@@ -338,11 +346,11 @@ func (r request) SendMultipleMetricsJSON(c JSONClienter, maxCount int, ctxGrSh c
 	}
 }
 
-func retryToSendMetrics(r request, c JSONClienter, url string, body []byte, tries []int, flags *SystemConfigFlags) error {
+func retryToSendMetrics(r request, c JSONClienter, url string, body []byte, tries []int, flags *SystemConfigFlags, manager *crypto.Manager) error {
 	var err error
 	for try := 0; try < len(tries); try++ {
 		time.Sleep(time.Duration(tries[try]) * time.Second)
-		err = c.SendPostRequestWithBody(r, url, body, flags)
+		err = c.SendPostRequestWithBody(r, url, body, flags, manager)
 		if err == nil {
 			break
 		}
@@ -352,15 +360,15 @@ func retryToSendMetrics(r request, c JSONClienter, url string, body []byte, trie
 }
 
 // SendMetrics отправляет метрики(несколько раз в случае неудачной отправки)
-func SendMetrics(r request, c JSONClienter, url string, monitor *storage.Monitor, flags *SystemConfigFlags) {
+func SendMetrics(r request, c JSONClienter, url string, monitor *storage.Monitor, flags *SystemConfigFlags, manager *crypto.Manager) {
 	var err error
 	body := metricsHandler.CollectMetricsRequestBodies(monitor)
 
-	if err = c.SendPostRequestWithBody(r, url, body, flags); err != nil {
+	if err = c.SendPostRequestWithBody(r, url, body, flags, manager); err != nil {
 		logger.WriteErrorLog(err.Error(), "Error in request")
 		var reqErr *internalErrors.RequestError
 		if errors.Is(err, reqErr) || errors.Is(err, syscall.ECONNREFUSED) {
-			err = retryToSendMetrics(r, c, url, body, internalErrors.TriesTimes, flags)
+			err = retryToSendMetrics(r, c, url, body, internalErrors.TriesTimes, flags, manager)
 			if err != nil {
 				logger.WriteErrorLog(err.Error(), "Error in retry request")
 			}

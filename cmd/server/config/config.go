@@ -10,11 +10,13 @@ import (
 
 	"github.com/caarlos0/env/v6"
 
+	"github.com/ramil063/gometrics/internal/constants"
 	"github.com/ramil063/gometrics/internal/logger"
 )
 
 type envConfig struct {
-	Config string `env:"CONFIG"`
+	Config     string `env:"CONFIG"`
+	GRPCConfig string `env:"GRPC_CONFIG"`
 }
 
 // ServerConfig структура для парсинга файла конфигурации
@@ -55,11 +57,11 @@ func (cfg *ServerConfig) prepareConfig() error {
 }
 
 // getConfigName получение названия файла конфигурации
-func getConfigName() string {
+func getConfigName(params ParamsProvider) string {
 	// configName имя файла конфигурации
 	var configName = ""
-	flag.StringVar(&configName, "c", "", "key for configuration")
-	flag.StringVar(&configName, "config", "", "key for configuration")
+	flag.StringVar(&configName, params.GetConsoleKeyShort(), "", "key for configuration")
+	flag.StringVar(&configName, params.GetConsoleKeyFull(), "", "key for configuration")
 
 	var ev envConfig
 	err := env.Parse(&ev)
@@ -67,16 +69,19 @@ func getConfigName() string {
 		logger.WriteErrorLog("failed to parse config vars", "envConfig")
 	}
 
-	if ev.Config != "" {
+	switch params.GetConfigType() {
+	case constants.ConfigHTTPTypeAlias:
 		configName = ev.Config
+	case constants.ConfigGRPCTypeAlias:
+		configName = ev.GRPCConfig
 	}
 
 	return configName
 }
 
 // GetConfig установка значений конфигурации
-func GetConfig() (*ServerConfig, error) {
-	configName := getConfigName()
+func GetConfig(params ParamsProvider) (*ServerConfig, error) {
+	configName := getConfigName(params)
 
 	var config ServerConfig
 	var err error

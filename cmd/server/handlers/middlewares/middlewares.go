@@ -224,9 +224,9 @@ func CheckHashMiddleware(next http.Handler) http.Handler {
 }
 
 // DecryptMiddleware расшифровка с помощью приватного ключа
-func DecryptMiddleware(next http.Handler) http.Handler {
+func DecryptMiddleware(next http.Handler, decryptor crypto.Decryptor) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if crypto.DefaultDecryptor == nil {
+		if decryptor == nil {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -238,7 +238,7 @@ func DecryptMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		decrypted, err := crypto.DefaultDecryptor.Decrypt(encrypted)
+		decrypted, err := decryptor.Decrypt(encrypted)
 		if err != nil {
 			logger.WriteErrorLog("Decrypting error", "Decryptor")
 			w.WriteHeader(http.StatusBadRequest)

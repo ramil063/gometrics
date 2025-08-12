@@ -1,2 +1,2 @@
-// Package handlers основная логика работы с gRPC сервером
-package handlers
+// Package grpc основная логика работы с gRPC сервером
+package grpc

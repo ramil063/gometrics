@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"net"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -82,12 +83,13 @@ func TestClient_SendMetrics(t *testing.T) {
 	client := &Client{
 		client: mockClient,
 	}
-
+	ctx, err := setHashByMetrics(request{IP: testIP}, testMetrics, &SystemConfigFlags{HashKey: testHashKey})
+	assert.NoError(t, err)
 	// Вызываем тестируемый метод
-	err := client.SendMetrics(
-		request{IP: testIP},
+	err = client.SendMetrics(
+		ctx,
 		testMetrics,
-		&SystemConfigFlags{HashKey: testHashKey},
+		[]byte{},
 	)
 
 	// Проверяем результат
@@ -144,6 +146,36 @@ func TestStartClient(t *testing.T) {
 			tt.args.serversWg.Add(1)
 			StartClient(ctx, tt.args.serversWg)
 			cancel()
+		})
+	}
+}
+
+func Test_setHashByMetrics(t *testing.T) {
+	type args struct {
+		flags   *SystemConfigFlags
+		r       request
+		metrics []*metrics.Metric
+	}
+	tests := []struct {
+		name string
+		want string
+		args args
+	}{
+		{
+			name: "test 1",
+			args: args{
+				r:       request{},
+				metrics: []*metrics.Metric{},
+				flags:   &SystemConfigFlags{},
+			},
+			want: "*context.valueCtx",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := setHashByMetrics(tt.args.r, tt.args.metrics, tt.args.flags)
+			assert.NoError(t, err)
+			assert.Equalf(t, tt.want, reflect.ValueOf(got).Type().String(), "setHashByMetrics(%v, %v, %v)", tt.args.r, tt.args.metrics, tt.args.flags)
 		})
 	}
 }

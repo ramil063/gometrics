@@ -16,6 +16,7 @@ import (
 	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
+	"github.com/ramil063/gometrics/internal/security/crypto"
 )
 
 // MaxSaverWorkTime максимальное время работы сохранения метрик
@@ -42,14 +43,17 @@ type Storager interface {
 }
 
 // Router маршрутизация
-func Router(s Storager) chi.Router {
+func Router(s Storager, manager *crypto.Manager) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(logger.ResponseLogger)
 	r.Use(logger.RequestLogger)
 	r.Use(middlewares.CheckTrustedIP)
 	r.Use(middlewares.GZIPMiddleware)
-	r.Use(middlewares.DecryptMiddleware)
+	PreparedDecryptMiddleware := func(next http.Handler) http.Handler {
+		return middlewares.DecryptMiddleware(next, manager.GetDefaultDecryptor())
+	}
+	r.Use(PreparedDecryptMiddleware)
 	r.Use(middlewares.CheckMethodMw)
 
 	homeHandlerFunction := func(rw http.ResponseWriter, r *http.Request) {

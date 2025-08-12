@@ -9,6 +9,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/go-resty/resty/v2"
+	"github.com/ramil063/gometrics/internal/security/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -67,7 +68,8 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.
 func TestRouter(t *testing.T) {
 	handlers.Restore = false
 	ms := NewMemStorage()
-	ts := httptest.NewServer(Router(ms))
+	manager := crypto.NewCryptoManager()
+	ts := httptest.NewServer(Router(ms, manager))
 	defer ts.Close()
 
 	var testTable = []struct {
@@ -90,7 +92,8 @@ func TestRouter(t *testing.T) {
 func Test_getValue(t *testing.T) {
 	handlers.Restore = false
 	ms := NewMemStorage()
-	ts := httptest.NewServer(Router(ms))
+	manager := crypto.NewCryptoManager()
+	ts := httptest.NewServer(Router(ms, manager))
 	defer ts.Close()
 
 	type want struct {
@@ -188,7 +191,8 @@ func Test_getValue(t *testing.T) {
 func Test_home(t *testing.T) {
 	handlers.Restore = false
 	ms := NewMemStorage()
-	ts := httptest.NewServer(Router(ms))
+	manager := crypto.NewCryptoManager()
+	ts := httptest.NewServer(Router(ms, manager))
 	defer ts.Close()
 
 	type want struct {

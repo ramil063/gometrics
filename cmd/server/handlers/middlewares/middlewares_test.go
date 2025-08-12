@@ -596,9 +596,10 @@ func (m *MockDecryptor) Decrypt(data []byte) ([]byte, error) {
 
 func TestDecryptMiddleware(t *testing.T) {
 	// Сохраняем оригинальный decryptor и восстанавливаем после теста
-	originalDecryptor := crypto.DefaultDecryptor
+	manager := crypto.NewCryptoManager()
+	originalDecryptor := manager.GetDefaultDecryptor()
 	defer func() {
-		crypto.DefaultDecryptor = originalDecryptor
+		manager.SetDefaultDecryptor(originalDecryptor)
 	}()
 
 	tests := []struct {
@@ -633,7 +634,8 @@ func TestDecryptMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			crypto.DefaultDecryptor = tt.decryptor
+			var decryptor crypto.Decryptor
+			decryptor = tt.decryptor
 
 			body := bytes.NewReader(tt.requestBody)
 
@@ -653,7 +655,7 @@ func TestDecryptMiddleware(t *testing.T) {
 			})
 
 			rr := httptest.NewRecorder()
-			middleware := DecryptMiddleware(nextHandler)
+			middleware := DecryptMiddleware(nextHandler, decryptor)
 			middleware.ServeHTTP(rr, req)
 
 			if status := rr.Code; status != tt.expectedStatus {

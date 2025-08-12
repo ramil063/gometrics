@@ -16,17 +16,18 @@ import (
 	pb "github.com/ramil063/gometrics/internal/grpc/proto"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/models"
+	"github.com/ramil063/gometrics/internal/security/crypto"
 )
 
 // Clienter работа с клиентом в формате json
 type Clienter interface {
 	Close() error
-	SendMetrics(r request, metrics []*pb.Metric, flags *SystemConfigFlags) error
+	SendMetrics(ctx context.Context, metrics []*pb.Metric, encryptedMetrics []byte) error
 }
 
 // Requester отправляет данные
 type Requester interface {
-	SendMetricsProcess(c Clienter, maxCount int, ctxGrSh context.Context, flags *SystemConfigFlags)
+	SendMetricsProcess(c Clienter, maxCount int, ctxGrSh context.Context, flags *SystemConfigFlags, manager *crypto.Manager)
 }
 
 type request struct {
@@ -56,7 +57,7 @@ func (r request) getOutboundIP() (string, error) {
 }
 
 // SendMetricsProcess отправка нескольких метрик
-func (r request) SendMetricsProcess(c Clienter, maxCount int, ctxGrSh context.Context, flags *SystemConfigFlags) {
+func (r request) SendMetricsProcess(c Clienter, maxCount int, ctxGrSh context.Context, flags *SystemConfigFlags, manager *crypto.Manager) {
 	var pollInterval = time.Duration(flags.PollInterval) * time.Second
 	var reportInterval = time.Duration(flags.ReportInterval) * time.Second
 	count := 0
@@ -107,7 +108,7 @@ func (r request) SendMetricsProcess(c Clienter, maxCount int, ctxGrSh context.Co
 
 			for worker := 0; worker < flags.RateLimit; worker++ {
 				log.Println("send metrics grpc worker=", worker)
-				go SendMetricsByGRPC(r, c, mon, flags)
+				go SendMetricsByGRPC(r, c, mon, flags, manager)
 			}
 
 			mu.Lock()
@@ -134,11 +135,11 @@ func (r request) SendMetricsProcess(c Clienter, maxCount int, ctxGrSh context.Co
 	}
 }
 
-func retryToSendMetrics(r request, c Clienter, metrics []*pb.Metric, tries []int, flags *SystemConfigFlags) error {
+func retryToSendMetrics(c Clienter, ctx context.Context, metrics []*pb.Metric, encryptedMetrics []byte, tries []int) error {
 	var err error
 	for try := 0; try < len(tries); try++ {
 		time.Sleep(time.Duration(tries[try]) * time.Second)
-		err = c.SendMetrics(r, metrics, flags)
+		err = c.SendMetrics(ctx, metrics, encryptedMetrics)
 		if err == nil {
 			break
 		}
@@ -148,13 +149,21 @@ func retryToSendMetrics(r request, c Clienter, metrics []*pb.Metric, tries []int
 }
 
 // SendMetricsByGRPC отправляет метрики(несколько раз в случае неудачной отправки)
-func SendMetricsByGRPC(r request, c Clienter, monitor *storage.Monitor, flags *SystemConfigFlags) {
+func SendMetricsByGRPC(r request, c Clienter, monitor *storage.Monitor, flags *SystemConfigFlags, manager *crypto.Manager) {
 	metrics := metricsHandler.GetMetricsCollection(monitor)
 	pbMetrics := ConvertToProto(metrics)
-	err := c.SendMetrics(r, pbMetrics, flags)
+	ctx, err := setHashByMetrics(r, pbMetrics, flags)
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "SetHashByMetrics")
+	}
+	pbMetrics, encryptedMetrics, err := encryptMetrics(pbMetrics, manager)
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "EncryptMetrics")
+	}
+	err = c.SendMetrics(ctx, pbMetrics, encryptedMetrics)
 	if err != nil {
 		logger.WriteErrorLog(err.Error(), "Error in sending metrics")
-		err = retryToSendMetrics(r, c, pbMetrics, errors.TriesTimes, flags)
+		err = retryToSendMetrics(c, ctx, pbMetrics, encryptedMetrics, errors.TriesTimes)
 		if err != nil {
 			logger.WriteErrorLog(err.Error(), "Error in sending metrics by retry")
 		}

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/caarlos0/env/v6"
-	grpcAgentConfig "github.com/ramil063/gometrics/cmd/agent/config/grpc"
+	"github.com/ramil063/gometrics/cmd/agent/config"
 )
 
 // SystemConfigFlags содержит переменные флагов
@@ -25,7 +25,7 @@ type SystemConfigFlags struct {
 }
 
 // GetFlags парсит глобальные переменные системы, или парсит флаги, или подменяет их значениями по умолчанию
-func GetFlags(config *grpcAgentConfig.AgentConfig) (*SystemConfigFlags, error) {
+func GetFlags(config *config.AgentConfig) (*SystemConfigFlags, error) {
 
 	//значения флагов по умолчанию
 	flags := &SystemConfigFlags{

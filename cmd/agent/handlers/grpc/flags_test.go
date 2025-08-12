@@ -5,9 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ramil063/gometrics/cmd/agent/config"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/ramil063/gometrics/cmd/agent/config/grpc"
 )
 
 func TestGetFlags(t *testing.T) {
@@ -114,7 +113,7 @@ func TestGetFlags(t *testing.T) {
 			// Set command line args
 			os.Args = append([]string{"cmd"}, tt.args...)
 
-			configMock := grpc.AgentConfig{}
+			configMock := config.AgentConfig{}
 			flags, err := GetFlags(&configMock)
 
 			assert.NoError(t, err)

@@ -12,6 +12,7 @@ import (
 	"github.com/ramil063/gometrics/cmd/server/handlers/grpc/server"
 	pb "github.com/ramil063/gometrics/internal/grpc/proto"
 	"github.com/ramil063/gometrics/internal/models"
+	"github.com/ramil063/gometrics/internal/security/crypto"
 )
 
 func TestConvertToProto(t *testing.T) {
@@ -69,6 +70,7 @@ func TestSendMetricsByGRPC(t *testing.T) {
 		monitor *storage.Monitor
 		r       request
 	}
+	manager := crypto.NewCryptoManager()
 	client, err := NewGRPCClient(":3202")
 	assert.NoError(t, err)
 	tests := []struct {
@@ -89,7 +91,7 @@ func TestSendMetricsByGRPC(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			SendMetricsByGRPC(tt.args.r, tt.args.c, tt.args.monitor, tt.args.flags)
+			SendMetricsByGRPC(tt.args.r, tt.args.c, tt.args.monitor, tt.args.flags, manager)
 		})
 	}
 }
@@ -104,6 +106,7 @@ func Test_request_SendMetricsProcess(t *testing.T) {
 		flags    *SystemConfigFlags
 		maxCount int
 	}
+	manager := crypto.NewCryptoManager()
 	client, err := NewGRPCClient(":3202")
 	assert.NoError(t, err)
 	tests := []struct {
@@ -134,7 +137,7 @@ func Test_request_SendMetricsProcess(t *testing.T) {
 			r := request{
 				IP: tt.fields.IP,
 			}
-			r.SendMetricsProcess(tt.args.c, tt.args.maxCount, tt.args.ctxGrSh, tt.args.flags)
+			r.SendMetricsProcess(tt.args.c, tt.args.maxCount, tt.args.ctxGrSh, tt.args.flags, manager)
 		})
 	}
 }
@@ -190,6 +193,7 @@ func Test_retryToSendMetrics(t *testing.T) {
 		r       request
 		tries   []int
 	}
+	ctx := context.Background()
 	client, err := NewGRPCClient(":3202")
 	assert.NoError(t, err)
 	tests := []struct {
@@ -212,7 +216,7 @@ func Test_retryToSendMetrics(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err = retryToSendMetrics(tt.args.r, tt.args.c, tt.args.metrics, tt.args.tries, tt.args.flags)
+			err = retryToSendMetrics(tt.args.c, ctx, tt.args.metrics, []byte{}, tt.args.tries)
 			assert.NoError(t, err)
 		})
 	}

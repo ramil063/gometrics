@@ -12,6 +12,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/ramil063/gometrics/internal/security/crypto"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ramil063/gometrics/cmd/agent/storage"
@@ -38,7 +39,7 @@ func (c ClientMock) NewRequest(method string, url string) (*http.Request, error)
 	return httptest.NewRequest(method, url, nil), nil
 }
 
-func (c JSONClientMock) SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags) error {
+func (c JSONClientMock) SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags, manager *crypto.Manager) error {
 	_ = httptest.NewRequest("POST", url, bytes.NewReader(body))
 	return nil
 }
@@ -92,6 +93,7 @@ func Test_request_SendMetricsJSON(t *testing.T) {
 	}{
 		{"send request"},
 	}
+	manager := crypto.NewCryptoManager()
 	flags := &SystemConfigFlags{
 		Address:        ":8080",
 		PollInterval:   2,
@@ -102,7 +104,7 @@ func Test_request_SendMetricsJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := request{}
-			assert.NoError(t, r.SendMetricsJSON(JSONClientMock{}, 11, flags))
+			assert.NoError(t, r.SendMetricsJSON(JSONClientMock{}, 11, flags, manager))
 		})
 	}
 }
@@ -163,6 +165,7 @@ func Test_client_SendPostRequestWithBody(t *testing.T) {
 		url  string
 		body []byte
 	}
+	manager := crypto.NewCryptoManager()
 	body, _ := json.Marshal(`{"id": "metric1", "type": "gauge", "value": 100.250}`)
 	tests := []struct {
 		wantErr assert.ErrorAssertionFunc
@@ -181,7 +184,7 @@ func Test_client_SendPostRequestWithBody(t *testing.T) {
 			flags := SystemConfigFlags{}
 			tt.wantErr(
 				t,
-				c.SendPostRequestWithBody(request{}, tt.args.url, tt.args.body, &flags),
+				c.SendPostRequestWithBody(request{}, tt.args.url, tt.args.body, &flags, manager),
 				fmt.Sprintf("SendPostRequestWithBody(%v, %v)", tt.args.url, tt.args.body),
 			)
 		})
@@ -195,6 +198,7 @@ func Test_request_SendMultipleMetricsJSON(t *testing.T) {
 	}{
 		{"send request"},
 	}
+	manager := crypto.NewCryptoManager()
 	flags := &SystemConfigFlags{
 		Address:        ":8080",
 		PollInterval:   2,
@@ -205,7 +209,7 @@ func Test_request_SendMultipleMetricsJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := request{}
 			wg.Add(1)
-			r.SendMultipleMetricsJSON(JSONClientMock{}, 7, context.Background(), flags, &wg)
+			r.SendMultipleMetricsJSON(JSONClientMock{}, 7, context.Background(), flags, manager, &wg)
 		})
 	}
 }
@@ -260,7 +264,8 @@ func Test_client_SendPostRequestWithBody1(t *testing.T) {
 		IP: "127.0.0.1",
 	}
 	flags := SystemConfigFlags{}
-	err := c.SendPostRequestWithBody(r, ts.URL, []byte("a"), &flags)
+	manager := crypto.NewCryptoManager()
+	err := c.SendPostRequestWithBody(r, ts.URL, []byte("a"), &flags, manager)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -273,7 +278,7 @@ type MockClient struct {
 	ShouldFail   bool
 }
 
-func (m *MockClient) SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags) error {
+func (m *MockClient) SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags, manager *crypto.Manager) error {
 	m.Attempts++
 
 	if url != m.ExpectedURL {
@@ -309,9 +314,9 @@ func TestSendMetrics_SuccessWithMock(t *testing.T) {
 	r := request{}
 	monitor := &storage.Monitor{} // Заполните данными, которые вернут ожидаемый body
 	flags := &SystemConfigFlags{}
-
+	manager := crypto.NewCryptoManager()
 	// 3. Запуск
-	SendMetrics(r, mockClient, mockClient.ExpectedURL, monitor, flags)
+	SendMetrics(r, mockClient, mockClient.ExpectedURL, monitor, flags, manager)
 
 	// 4. Проверки
 	if mockClient.Attempts != 1 {

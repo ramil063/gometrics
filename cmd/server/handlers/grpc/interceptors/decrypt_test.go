@@ -109,18 +109,20 @@ func TestDecryptUnaryInterceptor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Сохраняем и восстанавливаем глобальный дешифратор
-			originalDecryptor := crypto.GRPCDecryptor
-			crypto.GRPCDecryptor = tt.decryptor
-			defer func() { crypto.GRPCDecryptor = originalDecryptor }()
+			manager := crypto.NewCryptoManager()
+			originalDecryptor := manager.GetGRPCDecryptor()
+			manager.SetGRPCDecryptor(tt.decryptor)
+			defer func() { manager.SetGRPCDecryptor(originalDecryptor) }()
 
 			handler := &mockHandler{
 				resp: tt.handlerResp,
 				err:  tt.handlerErr,
 			}
 
-			resp, err := DecryptUnaryInterceptor(
-				context.Background(),
+			interceptor := NewDecryptUnaryInterceptor(
+				manager,
+			)
+			resp, err := interceptor(context.Background(),
 				tt.req,
 				nil, // info
 				handler.handle,

@@ -1,11 +1,12 @@
-package handlers
+package grpc
 
 import (
 	"flag"
 	"fmt"
 
 	"github.com/caarlos0/env/v6"
-	grpcServerConfig "github.com/ramil063/gometrics/cmd/server/config/grpc"
+
+	serverConfig "github.com/ramil063/gometrics/cmd/server/config"
 )
 
 // ServerConfigFlags содержит переменные флагов
@@ -29,7 +30,7 @@ type ServerConfigFlags struct {
 }
 
 // GetFlags парсит глобальные переменные системы, или парсит флаги, или подменяет их значениями по умолчанию
-func GetFlags(config *grpcServerConfig.ServerConfig) (*ServerConfigFlags, error) {
+func GetFlags(config *serverConfig.ServerConfig) (*ServerConfigFlags, error) {
 	//значения флагов по умолчанию
 	flags := &ServerConfigFlags{
 		Address:         "localhost:3202",
