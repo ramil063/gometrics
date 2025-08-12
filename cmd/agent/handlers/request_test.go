@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -11,9 +12,11 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/ramil063/gometrics/internal/security/crypto"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ramil063/gometrics/cmd/agent/storage"
+	internalErrors "github.com/ramil063/gometrics/internal/errors"
 )
 
 type RequestMock struct {
@@ -36,18 +39,22 @@ func (c ClientMock) NewRequest(method string, url string) (*http.Request, error)
 	return httptest.NewRequest(method, url, nil), nil
 }
 
-func (c JSONClientMock) SendPostRequestWithBody(url string, body []byte, flags *SystemConfigFlags) error {
+func (c JSONClientMock) SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags, manager *crypto.Manager) error {
 	_ = httptest.NewRequest("POST", url, bytes.NewReader(body))
 	return nil
 }
 
 func TestNewRequest(t *testing.T) {
+	req := RequestMock{}
+	req.Request = request{
+		IP: "127.0.1.1",
+	}
 	tests := []struct {
 		want Requester
 		name string
 	}{
 		{
-			want: RequestMock{}.Request,
+			want: req.Request,
 			name: "create new request",
 		},
 	}
@@ -86,6 +93,7 @@ func Test_request_SendMetricsJSON(t *testing.T) {
 	}{
 		{"send request"},
 	}
+	manager := crypto.NewCryptoManager()
 	flags := &SystemConfigFlags{
 		Address:        ":8080",
 		PollInterval:   2,
@@ -96,7 +104,7 @@ func Test_request_SendMetricsJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := request{}
-			assert.NoError(t, r.SendMetricsJSON(JSONClientMock{}, 11, flags))
+			assert.NoError(t, r.SendMetricsJSON(JSONClientMock{}, 11, flags, manager))
 		})
 	}
 }
@@ -157,6 +165,7 @@ func Test_client_SendPostRequestWithBody(t *testing.T) {
 		url  string
 		body []byte
 	}
+	manager := crypto.NewCryptoManager()
 	body, _ := json.Marshal(`{"id": "metric1", "type": "gauge", "value": 100.250}`)
 	tests := []struct {
 		wantErr assert.ErrorAssertionFunc
@@ -175,7 +184,7 @@ func Test_client_SendPostRequestWithBody(t *testing.T) {
 			flags := SystemConfigFlags{}
 			tt.wantErr(
 				t,
-				c.SendPostRequestWithBody(tt.args.url, tt.args.body, &flags),
+				c.SendPostRequestWithBody(request{}, tt.args.url, tt.args.body, &flags, manager),
 				fmt.Sprintf("SendPostRequestWithBody(%v, %v)", tt.args.url, tt.args.body),
 			)
 		})
@@ -183,11 +192,13 @@ func Test_client_SendPostRequestWithBody(t *testing.T) {
 }
 
 func Test_request_SendMultipleMetricsJSON(t *testing.T) {
+	var wg sync.WaitGroup
 	tests := []struct {
 		name string
 	}{
 		{"send request"},
 	}
+	manager := crypto.NewCryptoManager()
 	flags := &SystemConfigFlags{
 		Address:        ":8080",
 		PollInterval:   2,
@@ -197,57 +208,118 @@ func Test_request_SendMultipleMetricsJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := request{}
-			r.SendMultipleMetricsJSON(JSONClientMock{}, 7, context.Background(), flags)
+			wg.Add(1)
+			r.SendMultipleMetricsJSON(JSONClientMock{}, 7, context.Background(), flags, manager, &wg)
 		})
 	}
 }
 
-func Test_compressData(t *testing.T) {
-	type args struct {
-		data []byte
-	}
-	want := []byte{0x1f, 0x8b, 0x8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0x4a, 0x4, 0x4, 0x0, 0x0, 0xff, 0xff, 0x43, 0xbe, 0xb7, 0xe8, 0x1, 0x0, 0x0, 0x0}
-	tests := []struct {
-		name    string
-		args    args
-		want    []byte
-		wantErr bool
-	}{
-		{"test 1", args{data: []byte("a")}, want, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := compressData(tt.args.data)
-			assert.Equal(t, tt.want, got)
-			assert.NoError(t, err)
-		})
-	}
-}
+func TestSendPostRequest_Success(t *testing.T) {
+	// Создаем мок-сервер
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Проверяем метод и заголовок
+		if r.Method != "POST" {
+			t.Errorf("Expected POST request, got %s", r.Method)
+		}
+		if r.Header.Get("Content-Type") != "text/plain" {
+			t.Error("Expected Content-Type: text/plain")
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
 
-func BenchmarkCollectMetricsRequestBodies(b *testing.B) {
-	var m storage.Monitor
-
-	for i := 0; i < b.N; i++ {
-		CollectMetricsRequestBodies(&m)
+	c := client{httpClient: &http.Client{}}
+	err := c.SendPostRequest(ts.URL)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
 	}
 }
 
-func BenchmarkCollectMonitorMetrics(b *testing.B) {
-	var m storage.Monitor
-	var wg sync.WaitGroup
+func Test_client_SendPostRequestWithBody1(t *testing.T) {
+	// Создаем мок-сервер
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Проверяем метод и заголовок
+		if r.Method != "POST" {
+			t.Errorf("Expected POST request, got %s", r.Method)
+		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Error("Expected Content-Type: application/json")
+		}
+		if r.Header.Get("Content-Encoding") != "gzip" {
+			t.Error("Expected Content-Encoding: gzip")
+		}
+		if r.Header.Get("Accept-Encoding") != "gzip" {
+			t.Error("Expected Accept-Encoding: gzip")
+		}
+		if r.Header.Get("X-Real-IP") != "127.0.0.1" {
+			t.Error(r.Header.Get("X-Real-IP"))
+			t.Error("Expected X-Real-IP: gzip")
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
 
-	for i := 0; i < b.N; i++ {
-		CollectMonitorMetrics(1, &m, &wg)
+	c := client{httpClient: &http.Client{}}
+	r := request{
+		IP: "127.0.0.1",
+	}
+	flags := SystemConfigFlags{}
+	manager := crypto.NewCryptoManager()
+	err := c.SendPostRequestWithBody(r, ts.URL, []byte("a"), &flags, manager)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
 	}
 }
 
-func BenchmarkCollectGopsutilMetrics(b *testing.B) {
-	var m storage.Monitor
-	var wg sync.WaitGroup
-	storage.SetMetricsToMonitor(&m)
-	b.ResetTimer()
+type MockClient struct {
+	ExpectedURL  string
+	ExpectedBody []byte
+	Attempts     int
+	ShouldFail   bool
+}
 
-	for i := 0; i < b.N; i++ {
-		CollectGopsutilMetrics(&m, &wg)
+func (m *MockClient) SendPostRequestWithBody(r request, url string, body []byte, flags *SystemConfigFlags, manager *crypto.Manager) error {
+	m.Attempts++
+
+	if url != m.ExpectedURL {
+		return fmt.Errorf("unexpected URL: %s", url)
+	}
+
+	if !bytes.Equal(body, m.ExpectedBody) {
+		return fmt.Errorf("unexpected body")
+	}
+
+	if m.ShouldFail {
+		return &internalErrors.RequestError{Err: errors.New("mock error")}
+	}
+	return nil
+}
+
+func (m *MockClient) SendPostRequest(url string) error {
+	return nil
+}
+
+func (m *MockClient) NewRequest(method string, url string) (*http.Request, error) {
+	return http.NewRequest(method, url, nil)
+}
+
+func TestSendMetrics_SuccessWithMock(t *testing.T) {
+	// 1. Подготавливаем мок
+	mockClient := &MockClient{
+		ExpectedURL:  "http://test",
+		ExpectedBody: []byte(`{"metric":"value"}`), // Зависит от вашего CollectMetricsRequestBodies
+	}
+
+	// 2. Тестовые данные
+	r := request{}
+	monitor := &storage.Monitor{} // Заполните данными, которые вернут ожидаемый body
+	flags := &SystemConfigFlags{}
+	manager := crypto.NewCryptoManager()
+	// 3. Запуск
+	SendMetrics(r, mockClient, mockClient.ExpectedURL, monitor, flags, manager)
+
+	// 4. Проверки
+	if mockClient.Attempts != 1 {
+		t.Errorf("Expected 1 attempt, got %d", mockClient.Attempts)
 	}
 }

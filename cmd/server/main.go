@@ -13,13 +13,14 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-
 	serverConfig "github.com/ramil063/gometrics/cmd/server/config"
 	"github.com/ramil063/gometrics/cmd/server/handlers"
+	serverGRPC "github.com/ramil063/gometrics/cmd/server/handlers/grpc/server"
 	"github.com/ramil063/gometrics/cmd/server/handlers/server"
 	"github.com/ramil063/gometrics/cmd/server/storage/db"
 	"github.com/ramil063/gometrics/cmd/server/storage/db/dml"
 	"github.com/ramil063/gometrics/cmd/server/storage/file"
+	"github.com/ramil063/gometrics/internal/constants"
 	"github.com/ramil063/gometrics/internal/logger"
 	"github.com/ramil063/gometrics/internal/security/crypto"
 )
@@ -35,17 +36,23 @@ func main() {
 		panic(err)
 	}
 
-	config, err := serverConfig.GetConfig()
+	params := serverConfig.NewConfigParams(
+		constants.ConfigHTTPConsoleShortKey,
+		constants.ConfigHTTPConsoleFullKey,
+		constants.ConfigHTTPTypeAlias)
+	config, err := serverConfig.GetConfig(params)
 	if err != nil {
 		logger.WriteErrorLog(err.Error(), "config")
 	}
 	handlers.InitFlags(config)
 
+	manager := crypto.NewCryptoManager()
 	if handlers.CryptoKey != "" {
-		crypto.DefaultDecryptor, err = crypto.NewRSADecryptor(handlers.CryptoKey)
-		if err != nil {
-			logger.WriteErrorLog(err.Error(), "Failed to create decryptor")
+		defaultDecryptor, decryptorErr := crypto.NewRSADecryptor(handlers.CryptoKey)
+		if decryptorErr != nil {
+			logger.WriteErrorLog(decryptorErr.Error(), "Failed to create decryptor")
 		}
+		manager.SetDefaultDecryptor(defaultDecryptor)
 	}
 
 	fmt.Printf("Build version: %s\n", buildVersion)
@@ -89,7 +96,17 @@ func main() {
 
 	srv := &http.Server{
 		Addr:    handlers.MainURL,
-		Handler: server.Router(s),
+		Handler: server.Router(s, manager),
+	}
+
+	grpcFlags, grpcStorage, manager, err := serverGRPC.PrepareServerEnvironment()
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "serverGRPC.PrepareServerEnvironment")
+	}
+
+	grpcServer, err := serverGRPC.GetGRPCServer(grpcFlags, grpcStorage, manager)
+	if err != nil {
+		logger.WriteErrorLog(err.Error(), "GetGRPCServer init error")
 	}
 
 	// через этот канал сообщим основному потоку, что соединения закрыты
@@ -111,6 +128,7 @@ func main() {
 			// ошибки закрытия Listener
 			log.Printf("HTTP server Shutdown error: %v", err)
 		}
+		grpcServer.GracefulStop()
 
 		// сообщаем основному потоку,
 		// что все сетевые соединения обработаны и закрыты

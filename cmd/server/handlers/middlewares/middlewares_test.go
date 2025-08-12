@@ -596,9 +596,10 @@ func (m *MockDecryptor) Decrypt(data []byte) ([]byte, error) {
 
 func TestDecryptMiddleware(t *testing.T) {
 	// Сохраняем оригинальный decryptor и восстанавливаем после теста
-	originalDecryptor := crypto.DefaultDecryptor
+	manager := crypto.NewCryptoManager()
+	originalDecryptor := manager.GetDefaultDecryptor()
 	defer func() {
-		crypto.DefaultDecryptor = originalDecryptor
+		manager.SetDefaultDecryptor(originalDecryptor)
 	}()
 
 	tests := []struct {
@@ -633,7 +634,7 @@ func TestDecryptMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			crypto.DefaultDecryptor = tt.decryptor
+			decryptor := tt.decryptor
 
 			body := bytes.NewReader(tt.requestBody)
 
@@ -653,7 +654,7 @@ func TestDecryptMiddleware(t *testing.T) {
 			})
 
 			rr := httptest.NewRecorder()
-			middleware := DecryptMiddleware(nextHandler)
+			middleware := DecryptMiddleware(nextHandler, decryptor)
 			middleware.ServeHTTP(rr, req)
 
 			if status := rr.Code; status != tt.expectedStatus {
@@ -669,6 +670,72 @@ func TestDecryptMiddleware(t *testing.T) {
 			if tt.expectedBody != "" && rr.Body.String() != tt.expectedBody {
 				t.Errorf("unexpected body: got %v want %v",
 					rr.Body.String(), tt.expectedBody)
+			}
+		})
+	}
+}
+
+// TestCheckTrustedIP tests the CheckTrustedIP middleware for various trust scenarios
+func TestCheckTrustedIP(t *testing.T) {
+	// Save and restore the original TrustedSubnet after test
+	originalTrustedSubnet := handlers.TrustedSubnet
+	defer func() { handlers.TrustedSubnet = originalTrustedSubnet }()
+
+	tests := []struct {
+		name           string
+		trustedSubnet  string
+		realIP         string
+		expectedStatus int
+	}{
+		{
+			name:           "No TrustedSubnet set, should pass",
+			trustedSubnet:  "",
+			realIP:         "",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "TrustedSubnet set, X-Real-IP in subnet, should pass",
+			trustedSubnet:  "192.168.1.0/24",
+			realIP:         "192.168.1.42",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "TrustedSubnet set, X-Real-IP not in subnet, should fail",
+			trustedSubnet:  "192.168.1.0/24",
+			realIP:         "10.0.0.1",
+			expectedStatus: http.StatusForbidden,
+		},
+		{
+			name:           "TrustedSubnet set, missing X-Real-IP header, should fail",
+			trustedSubnet:  "192.168.1.0/24",
+			realIP:         "",
+			expectedStatus: http.StatusForbidden,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handlers.TrustedSubnet = tt.trustedSubnet
+
+			req := httptest.NewRequest("GET", "/", nil)
+			if tt.realIP != "" {
+				req.Header.Set("X-Real-IP", tt.realIP)
+			}
+
+			called := false
+			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				called = true
+				w.WriteHeader(http.StatusOK)
+			})
+
+			rr := httptest.NewRecorder()
+			CheckTrustedIP(next).ServeHTTP(rr, req)
+
+			assert.Equal(t, tt.expectedStatus, rr.Code)
+			if tt.expectedStatus == http.StatusOK {
+				assert.True(t, called, "next handler should be called for allowed requests")
+			} else {
+				assert.False(t, called, "next handler should not be called for forbidden requests")
 			}
 		})
 	}

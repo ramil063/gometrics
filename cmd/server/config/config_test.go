@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ramil063/gometrics/internal/constants"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -147,7 +148,11 @@ func TestGetConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetConfig()
+			params := NewConfigParams(
+				constants.ConfigHTTPConsoleShortKey,
+				constants.ConfigHTTPConsoleFullKey,
+				constants.ConfigHTTPTypeAlias)
+			got, err := GetConfig(params)
 			assert.NoError(t, err)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetConfig() got = %v, want %v", got, tt.want)

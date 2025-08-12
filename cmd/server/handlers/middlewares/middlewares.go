@@ -4,6 +4,7 @@ package middlewares
 import (
 	"bytes"
 	"io"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -223,9 +224,9 @@ func CheckHashMiddleware(next http.Handler) http.Handler {
 }
 
 // DecryptMiddleware расшифровка с помощью приватного ключа
-func DecryptMiddleware(next http.Handler) http.Handler {
+func DecryptMiddleware(next http.Handler, decryptor crypto.Decryptor) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if crypto.DefaultDecryptor == nil {
+		if decryptor == nil {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -237,7 +238,7 @@ func DecryptMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		decrypted, err := crypto.DefaultDecryptor.Decrypt(encrypted)
+		decrypted, err := decryptor.Decrypt(encrypted)
 		if err != nil {
 			logger.WriteErrorLog("Decrypting error", "Decryptor")
 			w.WriteHeader(http.StatusBadRequest)
@@ -250,4 +251,44 @@ func DecryptMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+// CheckTrustedIP проверяет чтобы переданный IP был доверенным
+func CheckTrustedIP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handlers.TrustedSubnet == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		realIP := r.Header.Get("X-Real-IP")
+		if realIP == "" {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		if !isIPTrusted(handlers.TrustedSubnet, realIP) {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// isIPTrusted проверяет, входит ли IP в доверенную подсеть
+func isIPTrusted(trustedIP string, ipStr string) bool {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return false
+	}
+
+	_, subnet, err := net.ParseCIDR(trustedIP)
+	if err != nil {
+		return false
+	}
+	if subnet.Contains(ip) {
+		return true
+	}
+	return false
 }

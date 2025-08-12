@@ -81,3 +81,98 @@ func TestNewRSAEncryptor(t *testing.T) {
 	}
 	_ = os.Remove("pub_test.pem")
 }
+
+func TestManager_GetGRPCDecryptor(t *testing.T) {
+	var decryptor Decryptor
+	t.Run("GetGRPCDecryptor", func(t *testing.T) {
+
+		cm := &Manager{
+			grpcDecryptor: decryptor,
+		}
+		assert.Equalf(t, decryptor, cm.GetGRPCDecryptor(), "GetGRPCDecryptor()")
+	})
+}
+
+func TestManager_GetDefaultDecryptor(t *testing.T) {
+	var decryptor Decryptor
+	t.Run("GetDefaultDecryptor", func(t *testing.T) {
+		cm := &Manager{
+			defaultDecryptor: decryptor,
+		}
+		assert.Equalf(t, decryptor, cm.GetDefaultDecryptor(), "GetDefaultDecryptor()")
+	})
+}
+
+func TestManager_GetDefaultEncryptor(t *testing.T) {
+	var encryptor Encryptor
+	t.Run("GetDefaultEncryptor", func(t *testing.T) {
+		cm := &Manager{
+			defaultEncryptor: encryptor,
+		}
+		assert.Equalf(t, encryptor, cm.GetDefaultEncryptor(), "GetDefaultEncryptor()")
+	})
+}
+
+func TestManager_GetGRPCEncryptor(t *testing.T) {
+	var encryptor Encryptor
+	t.Run("GetGRPCEncryptor", func(t *testing.T) {
+		cm := &Manager{
+			grpcEncryptor: encryptor,
+		}
+		assert.Equalf(t, encryptor, cm.GetGRPCEncryptor(), "GetGRPCEncryptor()")
+	})
+}
+
+func TestManager_SetDefaultDecryptor(t *testing.T) {
+	var decryptor Decryptor
+	t.Run("SetDefaultDecryptor", func(t *testing.T) {
+		cm := &Manager{}
+		cm.SetDefaultDecryptor(decryptor)
+		assert.Equalf(t, decryptor, cm.GetDefaultDecryptor(), "GetDefaultDecryptor()")
+	})
+}
+
+func TestManager_SetDefaultEncryptor(t *testing.T) {
+	var encryptor Encryptor
+	t.Run("SetDefaultEncryptor", func(t *testing.T) {
+		cm := &Manager{}
+		cm.SetDefaultEncryptor(encryptor)
+		assert.Equal(t, encryptor, cm.GetDefaultEncryptor(), "GetDefaultEncryptor()")
+	})
+}
+
+func TestManager_SetGRPCDecryptor(t *testing.T) {
+	var decryptor Decryptor
+	t.Run("SetGRPCDecryptor", func(t *testing.T) {
+		cm := &Manager{}
+		cm.SetGRPCDecryptor(decryptor)
+		assert.Equal(t, decryptor, cm.GetGRPCDecryptor(), "GetGRPCDecryptor()")
+	})
+}
+
+func TestManager_SetGRPCEncryptor(t *testing.T) {
+	var encryptor Encryptor
+
+	t.Run("SetGRPCEncryptor", func(t *testing.T) {
+		cm := &Manager{}
+		cm.SetGRPCEncryptor(encryptor)
+		assert.Equalf(t, encryptor, cm.GetGRPCEncryptor(), "SetGRPCEncryptor()")
+	})
+}
+
+func TestNewCryptoManager(t *testing.T) {
+	tests := []struct {
+		name string
+		want *Manager
+	}{
+		{
+			name: "NewCryptoManager",
+			want: &Manager{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, NewCryptoManager(), "NewCryptoManager()")
+		})
+	}
+}
